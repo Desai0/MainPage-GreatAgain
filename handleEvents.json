@@ -1,0 +1,25 @@
+{
+    "sections": [
+        {
+            "title": "Old Home UI",
+            "items": [
+                {
+                    "id": "enabled",
+                    "name": "Enable old home block",
+                    "description": "Показывать старый блок Моей волны на главной странице.",
+                    "type": "button",
+                    "bool": true,
+                    "defaultParameter": true
+                },
+                {
+                    "id": "hideVibeAnimation",
+                    "name": "Hide vibe animation",
+                    "description": "Скрывать блок с data-test-id=\"VIBE_ANIMATION\".",
+                    "type": "button",
+                    "bool": true,
+                    "defaultParameter": true
+                }
+            ]
+        }
+    ]
+}

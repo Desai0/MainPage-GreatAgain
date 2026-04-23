@@ -1,0 +1,22 @@
+{
+    "name": "YandexMusicOldHomeUI",
+    "description": "Возвращает старый интерфейс блока Моей волны на главной странице Яндекс Музыки.",
+    "version": "0.1.0",
+    "author": "desaichk",
+    "type": "script",
+    "image": "",
+    "banner": "",
+    "libraryLogo": "",
+    "css": "script.css",
+    "script": "script.js",
+    "tags": [
+        "yandex-music",
+        "home",
+        "ui"
+    ],
+    "dependencies": [],
+    "allowedUrls": [],
+    "supportedVersions": [],
+    "installSource": "local",
+    "id": "c701a852fd74a2850c59fef0"
+}
