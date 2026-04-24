@@ -1,7 +1,7 @@
 {
     "sections": [
         {
-            "title": "Old Home UI",
+            "title": "Old Home UI (WebNextNewWaveTab - on)",
             "items": [
                 {
                     "id": "enabled",
@@ -16,8 +16,8 @@
                     "name": "Hide vibe animation",
                     "description": "Скрывать блок с data-test-id=\"VIBE_ANIMATION\".",
                     "type": "button",
-                    "bool": true,
-                    "defaultParameter": true
+                    "bool": false,
+                    "defaultParameter": false
                 }
             ]
         }

@@ -1,3 +1,5 @@
+/* Прошу не использовать данные наработки в своих аддонах, если хотите новую функцию или добавить поддержку к вашей теме - свяжитесь со мной на ветке в дискорде */
+
 [data-test-id="MAIN_PAGE"] {
     position: relative;
 }
@@ -36,10 +38,16 @@
     margin-left: 0 !important;
 }
 
-/* .VibeWidgetAnimation_root__7fpeP canvas {
-    height: 200% !important;
-    width: 200% !important;
-} */
+
+.VibeWidgetAnimation_root__7fpeP canvas {
+    transform: scale(2) !important;
+    transform-origin: center center;
+}
+
+.VibeWidgetMeta_artist__qN0Fe {
+    flex-direction: row !important;
+}
+
 
 #ps-vibe-controls.ps-vibe-controls {
     position: absolute;
@@ -192,3 +200,21 @@
     display: flex;
     justify-content: center;
 }
+
+
+
+/* .VibeWidgetMeta_root__7N4Yf {
+    --reset-button-height: 3rem;
+    --artists-with-cover-height: 4rem;
+    --margin-block-start: calc(var(--reset-button-height) + var(--ym-spacer-size-xs));
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding: var(--ym-spacer-size-xxl);
+    padding-top: 1.5rem;
+    padding-right: 1.5rem;
+    padding-bottom: 1.5rem;
+    padding-left: 1.5rem;
+} */

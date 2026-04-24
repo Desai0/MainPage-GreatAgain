@@ -6,7 +6,7 @@
     "type": "script",
     "image": "orig.png",
     "banner": "1.png",
-    "libraryLogo": "",
+    "libraryLogo": "orig.png",
     "css": "script.css",
     "script": "script.js",
     "tags": [
@@ -15,6 +15,9 @@
     ],
     "dependencies": [],
     "allowedUrls": [],
-    "supportedVersions": [],
-    "installSource": "local"
+    "supportedVersions": [
+        "5.90.0"
+    ],
+    "installSource": "local",
+    "id": "53a5ab330f89df3ced0497c8"
 }

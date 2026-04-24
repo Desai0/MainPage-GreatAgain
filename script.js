@@ -12,7 +12,7 @@
     var VIBE_ANIMATION_TEST_ID = "VIBE_ANIMATION";
     var SWIPER_HIDDEN_CLASS = "ps-swiper-hidden-right";
     var SWIPER_LAYOUT_SHIFT_CLASS = "ps-swiper-layout-shifted";
-    var SHIFTED_LAYOUT_OFFSET_PX = 0; // 72px --- IGNORE ---
+    var SHIFTED_LAYOUT_OFFSET_PX = 0;
     var LAYOUT_RESYNC_DELAY_MS = 180;
     var UI_REFRESH_INTERVAL_MS = 250;
     var VIBE_TRIGGER_ARIA_RE = /включить мою волну/i;
