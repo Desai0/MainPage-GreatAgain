@@ -10,10 +10,14 @@
     var PLAYER_PLAY_TEST_ID = "PLAY_BUTTON";
     var PLAYER_PAUSE_TEST_ID = "PAUSE_BUTTON";
     var VIBE_ANIMATION_TEST_ID = "VIBE_ANIMATION";
-    var VIBE_META_ROOT_CLASS_FRAGMENT = "VibeWidgetMeta_root__";
     var SWIPER_HIDDEN_CLASS = "ps-swiper-hidden-right";
+    var SWIPER_LAYOUT_SHIFT_CLASS = "ps-swiper-layout-shifted";
+    var SHIFTED_LAYOUT_OFFSET_PX = 0; // 72px --- IGNORE ---
+    var LAYOUT_RESYNC_DELAY_MS = 180;
+    var UI_REFRESH_INTERVAL_MS = 250;
     var VIBE_TRIGGER_ARIA_RE = /включить мою волну/i;
     var LOG_PREFIX = "[test_addon]";
+    var pendingLayoutResyncTimer = 0;
 
     function unwrapSetting(entry, fallback) {
         if (entry && typeof entry === "object" && !Array.isArray(entry)) {
@@ -154,13 +158,6 @@
         }, null, "Failed to find main page");
     }
 
-    function findVibeMetaRoot() {
-        return safeRun(function() {
-            var node = document.querySelector('[class*="' + VIBE_META_ROOT_CLASS_FRAGMENT + '"]');
-            return node instanceof HTMLElement ? node : null;
-        }, null, "Failed to find vibe meta root");
-    }
-
     function findSwiperBlock() {
         return safeRun(function() {
             var swiper = document.querySelector(".swiper");
@@ -168,13 +165,109 @@
         }, null, "Failed to find swiper block");
     }
 
+    function isSwiperHidden() {
+        return safeRun(function() {
+            var swiper = findSwiperBlock();
+            return !!(swiper && swiper.classList.contains(SWIPER_HIDDEN_CLASS));
+        }, false, "Failed to read swiper state");
+    }
+
+    function syncSwiperLayoutState(root) {
+        safeRun(function() {
+            var shifted = isSwiperHidden();
+            var mainPage = findMainPage();
+            var nodes = document.querySelectorAll('[data-test-id="' + VIBE_ANIMATION_TEST_ID + '"]');
+
+            if (mainPage) {
+                mainPage.classList.toggle(SWIPER_LAYOUT_SHIFT_CLASS, shifted);
+            }
+            if (root instanceof HTMLElement) {
+                root.classList.toggle(SWIPER_LAYOUT_SHIFT_CLASS, shifted);
+            }
+
+            for (var i = 0; i < nodes.length; i += 1) {
+                var node = nodes[i];
+                if (!(node instanceof HTMLElement)) continue;
+                node.classList.toggle(SWIPER_LAYOUT_SHIFT_CLASS, shifted);
+            }
+
+            syncPinnedOffsets(root, mainPage, shifted, nodes);
+        }, null, "Failed to sync swiper layout state");
+    }
+
+    function syncPinnedOffsets(root, host, shifted, vibeNodes) {
+        safeRun(function() {
+            if (!(root instanceof HTMLElement) || !(host instanceof HTMLElement)) return;
+
+            root.style.removeProperty("--ps-root-left");
+            root.style.removeProperty("--ps-root-shift");
+
+            if (!shifted) return;
+
+            var hostRect = host.getBoundingClientRect();
+            var targetNode = null;
+
+            for (var i = 0; i < vibeNodes.length; i += 1) {
+                var node = vibeNodes[i];
+                if (!(node instanceof HTMLElement)) continue;
+                var rect = node.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                    targetNode = node;
+                    break;
+                }
+            }
+
+            if (!targetNode) {
+                root.style.setProperty("--ps-root-left", "50%");
+                root.style.setProperty("--ps-root-shift", SHIFTED_LAYOUT_OFFSET_PX + "px");
+                return;
+            }
+
+            var vibeRect = targetNode.getBoundingClientRect();
+            var targetCenter = vibeRect.left - hostRect.left + (vibeRect.width / 2) + SHIFTED_LAYOUT_OFFSET_PX;
+            var horizontalPadding = 24;
+            var rootWidth = Math.min(328, Math.max(0, hostRect.width - horizontalPadding));
+            var minCenter = rootWidth / 2 + 12;
+            var maxCenter = hostRect.width - rootWidth / 2 - 12;
+            var clampedCenter = Math.max(minCenter, Math.min(maxCenter, targetCenter));
+
+            root.style.setProperty("--ps-root-left", clampedCenter + "px");
+            root.style.setProperty("--ps-root-shift", "0px");
+        }, null, "Failed to sync pinned offsets");
+    }
+
     function toggleSwiperBlock() {
         return safeRun(function() {
             var swiper = findSwiperBlock();
             if (!swiper) return false;
             swiper.classList.toggle(SWIPER_HIDDEN_CLASS);
+            scheduleLayoutResync(document.getElementById(ROOT_ID));
             return true;
         }, false, "Failed to toggle swiper block");
+    }
+
+    function scheduleLayoutResync(root) {
+        safeRun(function() {
+            var currentRoot = root instanceof HTMLElement ? root : document.getElementById(ROOT_ID);
+            if (typeof window.requestAnimationFrame === "function") {
+                window.requestAnimationFrame(function() {
+                    syncSwiperLayoutState(currentRoot);
+                    window.requestAnimationFrame(function() {
+                        syncSwiperLayoutState(currentRoot);
+                    });
+                });
+            } else {
+                syncSwiperLayoutState(currentRoot);
+            }
+
+            if (pendingLayoutResyncTimer) {
+                clearTimeout(pendingLayoutResyncTimer);
+            }
+            pendingLayoutResyncTimer = setTimeout(function() {
+                syncSwiperLayoutState(currentRoot);
+                pendingLayoutResyncTimer = 0;
+            }, LAYOUT_RESYNC_DELAY_MS);
+        }, null, "Failed to schedule layout resync");
     }
 
     function findMyWaveNavButton() {
@@ -256,20 +349,8 @@
             for (var i = 0; i < nodes.length; i += 1) {
                 var node = nodes[i];
                 if (!(node instanceof HTMLElement)) continue;
-
-                if (shouldHide) {
-                    if (!node.dataset.psOriginalDisplay) {
-                        node.dataset.psOriginalDisplay = node.style.display || "";
-                    }
-                    node.style.display = "none";
-                } else {
-                    if (Object.prototype.hasOwnProperty.call(node.dataset, "psOriginalDisplay")) {
-                        node.style.display = node.dataset.psOriginalDisplay;
-                        delete node.dataset.psOriginalDisplay;
-                    } else {
-                        node.style.removeProperty("display");
-                    }
-                }
+                node.classList.toggle("ps-vibe-animation-hidden", Boolean(shouldHide));
+                node.style.removeProperty("display");
             }
         }, null, "Failed to sync vibe animation");
     }
@@ -495,10 +576,11 @@
             cleanupVibeMeta();
             syncVibeAnimation(options.hideVibeAnimation);
 
-            var host = findVibeMetaRoot() || findMainPage();
+            var host = findMainPage();
             if (!host) return;
 
             var root = ensureRoot(host);
+            scheduleLayoutResync(root);
             root.hidden = !options.visible;
             if (!options.visible) return;
 
@@ -515,10 +597,10 @@
         var observer = new MutationObserver(function() {
             if (updateScheduled) return;
             updateScheduled = true;
-            setTimeout(function() {
+            requestAnimationFrame(function() {
                 updateScheduled = false;
                 update();
-            }, 50);
+            });
         });
 
         function update() {
@@ -536,11 +618,10 @@
                 if (document.body) {
                     observer.observe(document.body, {
                         childList: true,
-                        subtree: true,
-                        attributes: true,
-                        attributeFilter: ["aria-label", "aria-expanded", "class", "style", "data-test-id"]
+                        subtree: true
                     });
                 }
+                setInterval(update, UI_REFRESH_INTERVAL_MS);
             }, null, "Start failed");
         }
 

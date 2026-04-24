@@ -1,23 +1,49 @@
+[data-test-id="MAIN_PAGE"] {
+    position: relative;
+}
+
 [class*="VibeWidgetMeta_entityMeta__"] {
     display: none !important;
 }
 
 .swiper {
     transition:
-        transform 0.8s cubic-bezier(0.22, 1, 0.36, 1),
-        opacity 0.45s ease !important;
+        transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.18s ease !important;
     will-change: transform, opacity;
 }
 
 .ps-swiper-hidden-right {
-    transform: translateX(18vw) !important;
+    transform: translateX(140px) !important;
     opacity: 0 !important;
     pointer-events: none !important;
 }
 
+[data-test-id="VIBE_ANIMATION"] {
+    position: relative;
+    left: 0%;
+    top: -0%;
+    margin-left: 0;
+    transform: translateX(0);
+    transition:
+        transform 0.16s ease-out,
+        opacity 0.18s ease;
+    will-change: transform, opacity;
+}
+
+[data-test-id="VIBE_ANIMATION"].ps-swiper-layout-shifted {
+    transform: translateX(14.8dvw) !important;
+    margin-left: 0 !important;
+}
+
+/* .VibeWidgetAnimation_root__7fpeP canvas {
+    height: 200% !important;
+    width: 200% !important;
+} */
+
 #ps-vibe-controls.ps-vibe-controls {
     position: absolute;
-    left: 50%;
+    left: var(--ps-root-left, 33%);
     top: 50%;
     z-index: 12;
     display: grid;
@@ -36,7 +62,16 @@
     backdrop-filter: blur(18px);
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
     pointer-events: auto;
-    transform: translate(-50%, -50%);
+    transform: translate(calc(-50% + var(--ps-root-shift, 0px)), -50%);
+    transition:
+        transform 0.16s ease-out,
+        opacity 0.18s ease;
+    will-change: transform;
+}
+
+#ps-vibe-controls.ps-vibe-controls.ps-swiper-layout-shifted {
+    left: var(--ps-root-left, 50%);
+    transform: translate(calc(-50% + var(--ps-root-shift, 72px)), -50%);
 }
 
 #ps-vibe-controls[hidden] {
