@@ -1,6 +1,6 @@
 {
     "name": "YM Old Home UI",
-    "description": "Реализует логику старого иинтерфейса Моей волны на главной странице Яндекс Музыки.",
+    "description": "Реализует логику старого иинтерфейса на новом дизайне главной страницы ЯМ.",
     "version": "0.1.0",
     "author": "desaichk",
     "type": "script",
@@ -14,10 +14,13 @@
         "ui"
     ],
     "dependencies": [],
-    "allowedUrls": [],
+    "allowedUrls": [
+        "http://127.0.0.1:2007/"
+    ],
     "supportedVersions": [
         "5.90.0"
     ],
     "installSource": "local",
-    "id": "53a5ab330f89df3ced0497c8"
+    "id": "53a5ab330f89df3ced0497c8",
+    "storeAddonId": "58d0eae9-587d-4b46-a77d-9fe009516a6f"
 }

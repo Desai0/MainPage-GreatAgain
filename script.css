@@ -21,27 +21,36 @@
     pointer-events: none !important;
 }
 
-[data-test-id="VIBE_ANIMATION"] {
-    position: relative;
-    left: 0%;
-    top: -0%;
-    margin-left: 0;
-    transform: translateX(0);
-    transition:
-        transform 0.16s ease-out,
-        opacity 0.18s ease;
-    will-change: transform, opacity;
-}
-
 [data-test-id="VIBE_ANIMATION"].ps-swiper-layout-shifted {
     transform: translateX(14.8dvw) !important;
     margin-left: 0 !important;
 }
 
+.CustomPlayerThumb_container__lBm2j.ChangeTimecodeBackground_brandedThumb__igXsO {
+    position: relative;
+    overflow: hidden;
+}
 
-.VibeWidgetAnimation_root__7fpeP canvas {
-    transform: scale(2) !important;
-    transform-origin: center center;
+.CustomPlayerThumb_container__lBm2j.ChangeTimecodeBackground_brandedThumb__igXsO > div {
+    position: relative;
+    z-index: 1;
+}
+
+.CustomPlayerThumb_container__lBm2j.ChangeTimecodeBackground_brandedThumb__igXsO canvas {
+    opacity: 0 !important;
+}
+
+.CustomPlayerThumb_container__lBm2j.ChangeTimecodeBackground_brandedThumb__igXsO::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: url("http://127.0.0.1:2007/assets/1.png?name=YM%20Old%20Home%20UI")
+        no-repeat center;
+    background-size: contain;
+    transform: rotate(90deg);
+    transform-origin: center;
 }
 
 .VibeWidgetMeta_artist__qN0Fe {
