@@ -1,7 +1,7 @@
 {
     "name": "YM Old Home UI",
     "description": "Реализует логику старого иинтерфейса Моей волны на главной странице Яндекс Музыки.",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "author": "desaichk",
     "type": "script",
     "image": "orig.png",

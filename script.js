@@ -343,6 +343,145 @@
         return;
     }
 
+    function getTrackDataFromDom() {
+        return safeRun(function() {
+            var ourPlayer = document.querySelector('[data-test-id="PLAYERBAR_DESKTOP"]');
+
+            // Cover from VibePage AlbumCover
+            var vibeCover = document.querySelector('[class*="AlbumCover_cover__"]');
+            var coverSrc = vibeCover ? vibeCover.src : "";
+            var coverSrcset = vibeCover ? vibeCover.srcset : "";
+
+            // Track title from VibePlayerBar_trackNameText (on Vibe page)
+            var vibeTrackName = document.querySelector('[class*="VibePlayerBar_trackNameText"]');
+            var title = "";
+            var titleHref = "#";
+            var artistsFromTitle = [];
+            
+            if (vibeTrackName) {
+                // On Vibe page, format is "ARTIST — TITLE"
+                var fullText = vibeTrackName.textContent.trim();
+                // Split by em dash (—) or regular dash (-)
+                var parts = fullText.split(/\s*[—-]\s*/);
+                if (parts.length >= 2) {
+                    // First part is artist, rest is title
+                    var artistName = parts[0].trim();
+                    title = parts.slice(1).join(" — ");
+                    
+                    // Try to find artist link
+                    var artistLink = document.querySelector('[data-test-id="SEPARATED_ARTIST_TITLE"]');
+                    if (artistLink && !ourPlayer.contains(artistLink)) {
+                        artistsFromTitle.push({
+                            text: artistLink.textContent.trim(),
+                            href: artistLink.getAttribute("href") || "#"
+                        });
+                    } else {
+                        // No link found, use text from title
+                        artistsFromTitle.push({
+                            text: artistName,
+                            href: "#"
+                        });
+                    }
+                } else {
+                    title = fullText;
+                }
+            } else {
+                // Fallback: try TRACK_TITLE (on other pages)
+                var allTitles = document.querySelectorAll('[data-test-id="TRACK_TITLE"]');
+                for (var j = 0; j < allTitles.length; j++) {
+                    if (!ourPlayer || !ourPlayer.contains(allTitles[j])) {
+                        title = allTitles[j].textContent.trim();
+                        titleHref = allTitles[j].getAttribute("href") || "#";
+                        break;
+                    }
+                }
+            }
+
+            // Artists — skip elements inside our player
+            var allArtists = document.querySelectorAll('[data-test-id="SEPARATED_ARTIST_TITLE"]');
+            var artistLinks = [];
+            for (var k = 0; k < allArtists.length; k++) {
+                if (!ourPlayer || !ourPlayer.contains(allArtists[k])) {
+                    artistLinks.push(allArtists[k]);
+                }
+            }
+
+            // Use artists from title if no artists found outside player
+            var finalArtists = artistLinks.length > 0 
+                ? artistLinks.map(function(a) { return { text: a.textContent.trim(), href: a.getAttribute("href") }; })
+                : artistsFromTitle;
+
+            if (!coverSrc && !title) return null;
+            return {
+                coverSrc: coverSrc,
+                coverSrcset: coverSrcset,
+                title: title || "Моя волна",
+                titleHref: titleHref,
+                artists: finalArtists
+            };
+        }, null, "Failed to get track data from DOM");
+    }
+
+    function syncPlayerData(playerEl) {
+        safeRun(function() {
+            var data = getTrackDataFromDom();
+            if (!data) return;
+
+            var cover = playerEl.querySelector('[data-test-id="ENTITY_COVER_IMAGE"]');
+            if (cover) {
+                cover.src = data.coverSrc;
+                cover.srcset = data.coverSrcset;
+            }
+
+            var titleLink = playerEl.querySelector('[data-test-id="TRACK_TITLE"]');
+            if (titleLink) {
+                titleLink.setAttribute("aria-label", "Трек " + data.title);
+                titleLink.href = data.titleHref || "#";
+                var titleSpan = titleLink.querySelector(".Meta_title__GGBnH");
+                if (titleSpan) titleSpan.textContent = data.title;
+            }
+
+            var artistsDiv = playerEl.querySelector(".Meta_artists__VnR52");
+            if (artistsDiv && data.artists.length) {
+                artistsDiv.innerHTML = "";
+                data.artists.forEach(function(artist, i) {
+                    var a = document.createElement("a");
+                    a.className = "buOTZq_TKQOVyjMLrXvB Meta_text__Y5uYH Meta_link__IFDBA";
+                    a.setAttribute("aria-label", "Артист " + artist.text);
+                    a.dataset.testId = "SEPARATED_ARTIST_TITLE";
+                    a.href = artist.href || "#";
+                    var span = document.createElement("span");
+                    span.className = "_MWOVuZRvUQdXKTMcOPx Z_WIr2W8JU4MPQek3hgR _3_Mxw7Si7j2g4kWjlpR Meta_text__Y5uYH Meta_artistCaption__JESZi";
+                    span.textContent = artist.text;
+                    a.appendChild(span);
+                    artistsDiv.appendChild(a);
+                    if (i < data.artists.length - 1) {
+                        artistsDiv.appendChild(document.createTextNode(", "));
+                    }
+                });
+            }
+
+            var playing = isPlaying();
+            var playBtn = playerEl.querySelector('[data-test-id="PLAY_BUTTON"]');
+            var pauseBtn = playerEl.querySelector('[data-test-id="PAUSE_BUTTON"]');
+            if (playing) {
+                if (playBtn) {
+                    playBtn.dataset.testId = "PAUSE_BUTTON";
+                    playBtn.setAttribute("aria-label", "Пауза");
+                    var svg = playBtn.querySelector("use");
+                    if (svg) svg.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", "/icons/sprite.svg#pause_filled_l");
+                }
+            } else {
+                if (pauseBtn) {
+                    pauseBtn.dataset.testId = "PLAY_BUTTON";
+                    pauseBtn.setAttribute("aria-label", "Воспроизведение");
+                    var svg2 = pauseBtn.querySelector("use");
+                    if (svg2) svg2.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", "/icons/sprite.svg#play_filled_l");
+                }
+            }
+        }, null, "Failed to sync player data");
+    }
+
     function syncVibeAnimation(shouldHide) {
         safeRun(function() {
             var nodes = document.querySelectorAll('[data-test-id="' + VIBE_ANIMATION_TEST_ID + '"]');
@@ -486,6 +625,699 @@
         return node;
     }
 
+    function createHomePlayer() {
+        var section = document.createElement("section");
+        section.className = "PlayerBarDesktopWithBackgroundProgressBar_root__bpmwN PlayerBarDesktopWithBackgroundProgressBar_important__HzXrK CommonLayout_playerBar__zXRxq PlayerBar_root__cXUnU";
+        section.dataset.testId = "PLAYERBAR_DESKTOP";
+        section.setAttribute("aria-labelledby", "player-region");
+        section.style.setProperty("--player-average-color-background", "hsl(240, 60%, 20%)");
+        
+        var playerBarDiv = document.createElement("div");
+        playerBarDiv.className = "PlayerBarDesktopWithBackgroundProgressBar_playerBar__mp0p9";
+        section.appendChild(playerBarDiv);
+        
+        var timecodeWrapper = createTimecodeWrapper();
+        playerBarDiv.appendChild(timecodeWrapper);
+        
+        var playerDiv = createPlayerDiv();
+        playerBarDiv.appendChild(playerDiv);
+        
+        return section;
+    }
+
+    function createPlayerDiv() {
+        var div = document.createElement("div");
+        div.className = "PlayerBarDesktopWithBackgroundProgressBar_player__ASKKs";
+        
+        var triggerModal = document.createElement("div");
+        triggerModal.className = "PlayerBarDesktopWithBackgroundProgressBar_triggerModal__EVv5d";
+        div.appendChild(triggerModal);
+        
+        var h3 = document.createElement("h3");
+        h3.className = "_MWOVuZRvUQdXKTMcOPx _sd8Q9d_Ttn0Ufe4ISWS nSU6fV9y80WrZEfafvww eaYyesBmJL_NbkgoYR1c";
+        h3.id = "player-region";
+        h3.textContent = "Плеер";
+        div.appendChild(h3);
+        
+        var infoDiv = createPlayerInfo();
+        div.appendChild(infoDiv);
+        
+        var sonataDiv = createSonataControls();
+        div.appendChild(sonataDiv);
+        
+        var metaDiv = createPlayerMeta();
+        div.appendChild(metaDiv);
+        
+        return div;
+    }
+
+    function createPlayerInfo() {
+        var div = document.createElement("div");
+        div.className = "PlayerBarDesktopWithBackgroundProgressBar_info__YnvZ_";
+        
+        var infoCard = document.createElement("div");
+        infoCard.className = "PlayerBarDesktopWithBackgroundProgressBar_infoCard__i0cbW";
+        div.appendChild(infoCard);
+        
+        var coverContainer = createCoverContainer();
+        infoCard.appendChild(coverContainer);
+        
+        var description = createTrackDescription();
+        infoCard.appendChild(description);
+        
+        return div;
+    }
+
+    function createCoverContainer() {
+        var div = document.createElement("div");
+        div.className = "qaIScXjx1qyXuaIHXQIo _7gw1qGE6BeUAdSMbhRx ZcpulvHgF_wsgzB8Hye9 PlayerBarDesktopWithBackgroundProgressBar_coverContainer__dkNCG";
+        div.dataset.testId = "PLAYERBAR_DESKTOP_COVER_CONTAINER";
+        
+        var img = document.createElement("img");
+        img.className = "qQ7GQU14EkggPBC6jdeS fosYvyLDok3Kjj9OWmxG PlayerBarDesktopWithBackgroundProgressBar_cover__MKmEt";
+        img.alt = "";
+        img.loading = "eager";
+        img.dataset.testId = "ENTITY_COVER_IMAGE";
+        img.src = "https://avatars.yandex.net/get-music-content/4796762/7669fe96.a.15647955-1/100x100";
+        img.srcset = "https://avatars.yandex.net/get-music-content/4796762/7669fe96.a.15647955-1/100x100, https://avatars.yandex.net/get-music-content/4796762/7669fe96.a.15647955-1/200x200 2x";
+        div.appendChild(img);
+        
+        var fullscreenBtn = createFullscreenButton();
+        div.appendChild(fullscreenBtn);
+        
+        return div;
+    }
+
+    function createFullscreenButton() {
+        var root = document.createElement("div");
+        root.className = "FullscreenPlayerDesktopButton_root__qGgoC";
+        
+        var button = document.createElement("button");
+        button.className = "cpeagBA1_PblpJn8Xgtv iJVAJMgccD4vj4E4o068 uwk3hfWzB2VT7kE13SQk IlG7b1K0AD7E7AMx6F5p nHWc2sto1C6Gm0Dpw_l0 WtFdWDF44egSVM_YiMUX qU2apWBO1yyEK0lZ3lPO undefined FullscreenPlayerDesktopButton_button__7NEl6";
+        button.type = "button";
+        button.setAttribute("aria-label", "Плеер на весь экран");
+        button.dataset.testId = "FULLSCREEN_PLAYER_BUTTON";
+        button.setAttribute("aria-live", "off");
+        button.setAttribute("aria-busy", "false");
+        
+        var span = document.createElement("span");
+        span.className = "JjlbHZ4FaP9EAcR_1DxF";
+        span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP UwnL5AJBMMAp6NwMDdZk", "fullscreen_xs"));
+        button.appendChild(span);
+        root.appendChild(button);
+        
+        return root;
+    }
+
+    function createTrackDescription() {
+        var div = document.createElement("div");
+        div.className = "PlayerBarDesktopWithBackgroundProgressBar_description__5jHke";
+        
+        var metaRoot = document.createElement("div");
+        metaRoot.className = "Meta_root__R8n1h Meta_root_withSecondaryColor___uENY";
+        
+        var metaContainer = document.createElement("div");
+        metaContainer.className = "Meta_metaContainer__7i2dp";
+        metaRoot.appendChild(metaContainer);
+        div.appendChild(metaRoot);
+        
+        var titleContainer = createTitleContainer();
+        metaContainer.appendChild(titleContainer);
+        
+        var artistsDiv = createArtistsDiv();
+        metaContainer.appendChild(artistsDiv);
+        
+        return div;
+    }
+
+    function createTitleContainer() {
+        var div = document.createElement("div");
+        div.className = "Meta_titleContainer__gDuXr";
+        
+        var textDiv = document.createElement("div");
+        textDiv.className = "_MWOVuZRvUQdXKTMcOPx LezmJlldtbHWqU7l1950 oyQL2RSmoNbNQf3Vc6YI Z_WIr2W8JU4MPQek3hgR _3_Mxw7Si7j2g4kWjlpR Meta_text__Y5uYH";
+        textDiv.style.webkitLineClamp = "1";
+        
+        var link = document.createElement("a");
+        link.className = "buOTZq_TKQOVyjMLrXvB Meta_albumLink__gASh6";
+        link.setAttribute("aria-label", "Трек Моя волна");
+        link.dataset.testId = "TRACK_TITLE";
+        link.href = "#";
+        
+        var span = document.createElement("span");
+        span.className = "_MWOVuZRvUQdXKTMcOPx Z_WIr2W8JU4MPQek3hgR _3_Mxw7Si7j2g4kWjlpR Meta_text__Y5uYH Meta_title__GGBnH";
+        span.textContent = "Моя волна";
+        link.appendChild(span);
+        textDiv.appendChild(link);
+        div.appendChild(textDiv);
+        
+        return div;
+    }
+
+    function createArtistsDiv() {
+        var div = document.createElement("div");
+        div.className = "SeparatedArtists_root_variant_breakAll__34YbW SeparatedArtists_root_clamp__SyvjM Meta_text__Y5uYH Meta_artists__VnR52";
+        div.style.webkitLineClamp = "1";
+        
+        var link = document.createElement("a");
+        link.className = "buOTZq_TKQOVyjMLrXvB Meta_text__Y5uYH Meta_link__IFDBA";
+        link.setAttribute("aria-label", "Артист Яндекс Музыка");
+        link.dataset.testId = "SEPARATED_ARTIST_TITLE";
+        link.href = "#";
+        
+        var span = document.createElement("span");
+        span.className = "_MWOVuZRvUQdXKTMcOPx Z_WIr2W8JU4MPQek3hgR _3_Mxw7Si7j2g4kWjlpR Meta_text__Y5uYH Meta_artistCaption__JESZi";
+        span.textContent = "Яндекс Музыка";
+        link.appendChild(span);
+        div.appendChild(link);
+        
+        return div;
+    }
+
+    function createSonataControls() {
+        var div = document.createElement("div");
+        div.className = "PlayerBarDesktopWithBackgroundProgressBar_sonata__mGFb_";
+        
+        var likeBtn = createLikeButton();
+        div.appendChild(likeBtn);
+        
+        var controls = createBaseSonataControls();
+        div.appendChild(controls);
+        
+        var dislikeBtn = createDislikeButton();
+        div.appendChild(dislikeBtn);
+        
+        return div;
+    }
+
+    function createLikeButton() {
+        var button = document.createElement("button");
+        button.className = "cpeagBA1_PblpJn8Xgtv UDMYhpDjiAFT3xUx268O zIMibMuH7wcqUoW7KH1B IlG7b1K0AD7E7AMx6F5p HbaqudSqu7Q3mv3zMPGr WtFdWDF44egSVM_YiMUX qU2apWBO1yyEK0lZ3lPO undefined";
+        button.type = "button";
+        button.setAttribute("aria-label", "Нравится");
+        button.setAttribute("aria-pressed", "false");
+        button.dataset.testId = "LIKE_BUTTON";
+        button.setAttribute("aria-live", "off");
+        button.setAttribute("aria-busy", "false");
+        
+        var span = document.createElement("span");
+        span.className = "JjlbHZ4FaP9EAcR_1DxF";
+        span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP UwnL5AJBMMAp6NwMDdZk", "like_xs"));
+        button.appendChild(span);
+        
+        return button;
+    }
+
+    function createDislikeButton() {
+        var button = document.createElement("button");
+        button.className = "cpeagBA1_PblpJn8Xgtv UDMYhpDjiAFT3xUx268O uwk3hfWzB2VT7kE13SQk IlG7b1K0AD7E7AMx6F5p HbaqudSqu7Q3mv3zMPGr WtFdWDF44egSVM_YiMUX qU2apWBO1yyEK0lZ3lPO undefined";
+        button.type = "button";
+        button.setAttribute("aria-label", "Не нравится");
+        button.setAttribute("aria-pressed", "false");
+        button.dataset.testId = "DISLIKE_BUTTON";
+        button.setAttribute("aria-live", "off");
+        button.setAttribute("aria-busy", "false");
+        
+        var span = document.createElement("span");
+        span.className = "JjlbHZ4FaP9EAcR_1DxF";
+        span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP UwnL5AJBMMAp6NwMDdZk", "dislike_xs"));
+        button.appendChild(span);
+        
+        return button;
+    }
+
+    function createBaseSonataControls() {
+        var div = document.createElement("div");
+        div.className = "BaseSonataControlsDesktop_root__E6wjA PlayerBarDesktopWithBackgroundProgressBar_sonataControls__rSmXQ PlayerBarDesktopWithBackgroundProgressBar_important__HzXrK";
+        
+        var shuffleContainer = createShuffleContainer();
+        div.appendChild(shuffleContainer);
+        
+        var buttonsDiv = createSonataButtons();
+        div.appendChild(buttonsDiv);
+        
+        var repeatContainer = createRepeatContainer();
+        div.appendChild(repeatContainer);
+        
+        return div;
+    }
+
+    function createShuffleContainer() {
+        var div = document.createElement("div");
+        div.className = "BaseSonataControlsDesktop_buttonContainer__EB404";
+        
+        var button = document.createElement("button");
+        button.className = "cpeagBA1_PblpJn8Xgtv UDMYhpDjiAFT3xUx268O uwk3hfWzB2VT7kE13SQk IlG7b1K0AD7E7AMx6F5p eQt33MLDiQ6DRSuLaYEp qU2apWBO1yyEK0lZ3lPO undefined BaseSonataControlsDesktop_sonataButton__GbwFt";
+        button.type = "button";
+        button.setAttribute("aria-label", "В случайном порядке");
+        button.setAttribute("aria-pressed", "false");
+        button.setAttribute("aria-hidden", "true");
+        button.dataset.testId = "SHUFFLE_BUTTON";
+        button.disabled = true;
+        button.setAttribute("aria-live", "off");
+        button.setAttribute("aria-busy", "false");
+        
+        var span = document.createElement("span");
+        span.className = "JjlbHZ4FaP9EAcR_1DxF";
+        span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP ShuffleButton_shuffleIcon_disabled__fQsOo UwnL5AJBMMAp6NwMDdZk", "shuffle_xs"));
+        button.appendChild(span);
+        div.appendChild(button);
+        
+        return div;
+    }
+
+    function createRepeatContainer() {
+        var div = document.createElement("div");
+        div.className = "BaseSonataControlsDesktop_buttonContainer__EB404";
+        
+        var button = document.createElement("button");
+        button.className = "cpeagBA1_PblpJn8Xgtv UDMYhpDjiAFT3xUx268O uwk3hfWzB2VT7kE13SQk IlG7b1K0AD7E7AMx6F5p HbaqudSqu7Q3mv3zMPGr eQt33MLDiQ6DRSuLaYEp qU2apWBO1yyEK0lZ3lPO undefined BaseSonataControlsDesktop_sonataButton__GbwFt";
+        button.type = "button";
+        button.setAttribute("aria-hidden", "false");
+        button.setAttribute("aria-label", "Повтор");
+        button.setAttribute("aria-pressed", "false");
+        button.dataset.testId = "REPEAT_BUTTON_NO_REPEAT";
+        button.setAttribute("aria-live", "off");
+        button.setAttribute("aria-busy", "false");
+        
+        var span = document.createElement("span");
+        span.className = "JjlbHZ4FaP9EAcR_1DxF";
+        span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP RepeatButton_repeatIcon_none__2nb1J UwnL5AJBMMAp6NwMDdZk", "repeat_xs"));
+        button.appendChild(span);
+        div.appendChild(button);
+        
+        button.addEventListener("click", function() {
+            findOriginalMenuButton("repeat_xs", function(originalButton) {
+                if (originalButton) {
+                    dispatchClick(originalButton);
+                }
+            });
+        });
+        
+        return div;
+    }
+
+    function ensureVibeMenuOpen() {
+        safeRun(function() {
+            var menu = document.querySelector('.VibeContextMenu_root__872YP');
+            if (!menu) {
+                var menuTrigger = document.querySelector('button[aria-label="Контекстное меню"][aria-haspopup="dialog"]');
+                if (menuTrigger && menuTrigger.getAttribute('aria-expanded') !== 'true') {
+                    dispatchClick(menuTrigger);
+                }
+            }
+        }, null, "Failed to ensure vibe menu open");
+    }
+
+    function findOriginalMenuButton(iconId, callback) {
+        return safeRun(function() {
+            var menu = document.querySelector('.VibeContextMenu_root__872YP');
+            var button = menu ? clickMenuButton(menu, iconId) : null;
+            if (button && callback) callback(button);
+            return button;
+        }, null, "Failed to find original menu button");
+    }
+
+    function clickMenuButton(menu, iconId) {
+        if (!menu) return null;
+        
+        var buttons = menu.querySelectorAll('.VibeContextMenu_menuItem__RK1Sg');
+        for (var i = 0; i < buttons.length; i++) {
+            var button = buttons[i];
+            var use = button.querySelector('use');
+            if (use && use.getAttribute('xlink:href') === '/icons/sprite.svg#' + iconId) {
+                return button;
+            }
+        }
+        return null;
+    }
+
+    function createSonataButtons() {
+        var div = document.createElement("div");
+        div.className = "BaseSonataControlsDesktop_sonataButtons__7vLtw";
+        
+        var prevBtn = createPreviousButton();
+        div.appendChild(prevBtn);
+        
+        var playPauseBtn = createPlayPauseButton();
+        div.appendChild(playPauseBtn);
+        
+        var nextBtn = createNextButton();
+        div.appendChild(nextBtn);
+        
+        return div;
+    }
+
+    function createPreviousButton() {
+        var button = document.createElement("button");
+        button.className = "cpeagBA1_PblpJn8Xgtv UDMYhpDjiAFT3xUx268O uwk3hfWzB2VT7kE13SQk IlG7b1K0AD7E7AMx6F5p HbaqudSqu7Q3mv3zMPGr Y2uqxoU7xa_AZ8FUCVOW qU2apWBO1yyEK0lZ3lPO undefined BaseSonataControlsDesktop_sonataButton__GbwFt";
+        button.type = "button";
+        button.setAttribute("aria-hidden", "false");
+        button.setAttribute("aria-label", "Предыдущая песня");
+        button.dataset.testId = "PREVIOUS_TRACK_BUTTON";
+        button.setAttribute("aria-live", "off");
+        button.setAttribute("aria-busy", "false");
+        
+        var span = document.createElement("span");
+        span.className = "JjlbHZ4FaP9EAcR_1DxF";
+        span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP l3tE1hAMmBj2aoPPwU08", "previous_xxs"));
+        button.appendChild(span);
+        
+        return button;
+    }
+
+    function createNextButton() {
+        var button = document.createElement("button");
+        button.className = "cpeagBA1_PblpJn8Xgtv UDMYhpDjiAFT3xUx268O uwk3hfWzB2VT7kE13SQk IlG7b1K0AD7E7AMx6F5p HbaqudSqu7Q3mv3zMPGr Y2uqxoU7xa_AZ8FUCVOW qU2apWBO1yyEK0lZ3lPO undefined BaseSonataControlsDesktop_sonataButton__GbwFt";
+        button.type = "button";
+        button.setAttribute("aria-hidden", "false");
+        button.setAttribute("aria-label", "Следующая песня");
+        button.dataset.testId = "NEXT_TRACK_BUTTON";
+        button.setAttribute("aria-live", "off");
+        button.setAttribute("aria-busy", "false");
+        
+        var span = document.createElement("span");
+        span.className = "JjlbHZ4FaP9EAcR_1DxF";
+        span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP l3tE1hAMmBj2aoPPwU08", "next_xxs"));
+        button.appendChild(span);
+        
+        return button;
+    }
+
+    function createPlayPauseButton() {
+        var button = document.createElement("button");
+        button.className = "cpeagBA1_PblpJn8Xgtv UDMYhpDjiAFT3xUx268O uwk3hfWzB2VT7kE13SQk IlG7b1K0AD7E7AMx6F5p HbaqudSqu7Q3mv3zMPGr undefined qU2apWBO1yyEK0lZ3lPO WsKeF73pWotx9W1tWdYY BaseSonataControlsDesktop_sonataButton__GbwFt";
+        button.type = "button";
+        button.setAttribute("aria-label", "Воспроизведение");
+        button.dataset.testId = "PLAY_BUTTON";
+        button.setAttribute("aria-live", "off");
+        button.setAttribute("aria-busy", "false");
+        
+        var span = document.createElement("span");
+        span.className = "JjlbHZ4FaP9EAcR_1DxF";
+        span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP BaseSonataControlsDesktop_playButtonIcon__TlFqv YjRa1ZjM_lXFlrfS7jcu", "play_filled_l"));
+        button.appendChild(span);
+        
+        button.addEventListener("click", function() {
+            toggleMyWave().catch(function(error) {
+                logError("Failed to toggle playback", error);
+            });
+        });
+        
+        return button;
+    }
+
+    function createPlayerMeta() {
+        var div = document.createElement("div");
+        div.className = "PlayerBarDesktopWithBackgroundProgressBar_meta__FhKTC";
+        
+        var lyricsBtn = createLyricsButton();
+        div.appendChild(lyricsBtn);
+        
+        var queueBtn = createQueueButton();
+        div.appendChild(queueBtn);
+        
+        var settingsBtn = createSettingsButton2();
+        div.appendChild(settingsBtn);
+        
+        var volumeControl = createVolumeControl();
+        div.appendChild(volumeControl);
+        
+        return div;
+    }
+
+    function createLyricsButton() {
+        var button = document.createElement("button");
+        button.className = "cpeagBA1_PblpJn8Xgtv UDMYhpDjiAFT3xUx268O uwk3hfWzB2VT7kE13SQk IlG7b1K0AD7E7AMx6F5p HbaqudSqu7Q3mv3zMPGr eQt33MLDiQ6DRSuLaYEp qU2apWBO1yyEK0lZ3lPO undefined";
+        button.type = "button";
+        button.setAttribute("aria-hidden", "false");
+        button.setAttribute("aria-label", "Включить текстомузыку Может нарушить доступность");
+        button.dataset.testId = "PLAYERBAR_DESKTOP_SYNC_LYRICS_BUTTON";
+        button.setAttribute("aria-live", "off");
+        button.setAttribute("aria-busy", "false");
+        
+        var span = document.createElement("span");
+        span.className = "JjlbHZ4FaP9EAcR_1DxF";
+        span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP UwnL5AJBMMAp6NwMDdZk", "syncLyrics_xs"));
+        button.appendChild(span);
+        
+        button.addEventListener("click", function() {
+            findOriginalMenuButton("syncLyrics_xs", function(originalButton) {
+                if (originalButton) {
+                    dispatchClick(originalButton);
+                }
+            });
+        });
+        
+        return button;
+    }
+
+    function createQueueButton() {
+        var button = document.createElement("button");
+        button.className = "cpeagBA1_PblpJn8Xgtv UDMYhpDjiAFT3xUx268O uwk3hfWzB2VT7kE13SQk IlG7b1K0AD7E7AMx6F5p HbaqudSqu7Q3mv3zMPGr eQt33MLDiQ6DRSuLaYEp qU2apWBO1yyEK0lZ3lPO undefined";
+        button.type = "button";
+        button.setAttribute("aria-label", "Очередь воспроизведения");
+        button.dataset.testId = "PLAYERBAR_DESKTOP_PLAY_QUEUE_BUTTON";
+        button.setAttribute("aria-live", "off");
+        button.setAttribute("aria-busy", "false");
+        
+        var span = document.createElement("span");
+        span.className = "JjlbHZ4FaP9EAcR_1DxF";
+        span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP UwnL5AJBMMAp6NwMDdZk", "playQueue_xs"));
+        button.appendChild(span);
+        
+        button.addEventListener("click", function() {
+            findOriginalMenuButton("playQueue_xs", function(originalButton) {
+                if (originalButton) {
+                    dispatchClick(originalButton);
+                }
+            });
+        });
+        
+        return button;
+    }
+
+    function createSettingsButton2() {
+        var wrapper = document.createElement("div");
+        wrapper.className = "cpeagBA1_PblpJn8Xgtv HbaqudSqu7Q3mv3zMPGr";
+        
+        var button = document.createElement("button");
+        button.className = "cpeagBA1_PblpJn8Xgtv UDMYhpDjiAFT3xUx268O uwk3hfWzB2VT7kE13SQk IlG7b1K0AD7E7AMx6F5p HbaqudSqu7Q3mv3zMPGr eQt33MLDiQ6DRSuLaYEp qU2apWBO1yyEK0lZ3lPO undefined PlayerBarDesktopWithBackgroundProgressBar_settingsButton__HnCgK";
+        button.type = "button";
+        button.setAttribute("aria-label", "Настройки звука");
+        button.dataset.testId = "SOUND_QUALITY_BUTTON";
+        button.setAttribute("aria-live", "off");
+        button.setAttribute("aria-busy", "false");
+        
+        var span = document.createElement("span");
+        span.className = "JjlbHZ4FaP9EAcR_1DxF";
+        span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP UwnL5AJBMMAp6NwMDdZk", "settings_xs"));
+        button.appendChild(span);
+        wrapper.appendChild(button);
+        
+        button.addEventListener("click", function() {
+            findOriginalMenuButton("settings_xs", function(originalButton) {
+                if (originalButton) {
+                    dispatchClick(originalButton);
+                }
+            });
+        });
+        
+        return wrapper;
+    }
+
+    function createVolumeControl() {
+        var originalVolume = document.querySelector('.ChangeVolume_root__HDxtA.VibePlayerBar_changeVolume__x7FHC');
+        if (originalVolume) {
+            originalVolume.classList.remove('VibePlayerBar_changeVolume__x7FHC');
+            return originalVolume;
+        }
+        
+        var div = document.createElement("div");
+        div.className = "ChangeVolume_root__HDxtA";
+        div.textContent = "Volume control not found";
+        return div;
+    }
+
+    function createTimecodeWrapper() {
+        var wrapper = document.createElement("div");
+        wrapper.className = "ChangeTimecodeBackground_root__B89FS ChangeTimecodeBackground_root_isPlayingTrack__2naHL";
+        wrapper.dataset.testId = "TIMECODE_WRAPPER";
+        wrapper.style.setProperty("--size-thumb", "12px");
+        wrapper.style.setProperty("--track-progress", "0%");
+        wrapper.style.setProperty("--thumb-position", "0px");
+        
+        var timecodeEnd = createTimecode("02:14", "TIMECODE_TIME_END", "end");
+        var timecodeCurrent = createTimecode("00:00", "TIMECODE_TIME_START", "start");
+        
+        wrapper.appendChild(timecodeEnd);
+        wrapper.appendChild(timecodeCurrent);
+        
+        var progressBar = document.createElement("div");
+        progressBar.className = "ChangeTimecodeBackground_progressbar__M93Ie PlayerBarDesktopWithBackgroundProgressBar_progressBar___Q6eK";
+        wrapper.appendChild(progressBar);
+        
+        var thumb = document.createElement("div");
+        thumb.className = "ChangeTimecodeBackground_thumb__vx6J0";
+        wrapper.appendChild(thumb);
+        
+        var slider = createTimecodeSlider();
+        wrapper.appendChild(slider);
+        
+        return wrapper;
+    }
+
+    function createTimecode(time, testId, type) {
+        var span = document.createElement("span");
+        span.className = "_MWOVuZRvUQdXKTMcOPx mxSPe5xpZnie9gpIqacd _3_Mxw7Si7j2g4kWjlpR Timecode_root__TLT75";
+        span.className += type === "end" ? " Timecode_root_end__LLQsh TimecodeGroup_timecode__IJXpy ChangeTimecodeBackground_timecodeGroup__2VQ1N TimecodeGroup_timecode_end__kzP5g" : " Timecode_root_start__pHG5N TimecodeGroup_timecode__IJXpy TimecodeGroup_timecode_current__wv9pb ChangeTimecodeBackground_timecodeGroup__2VQ1N ChangeTimecodeBackground_timecodeGroupCurrent__aGlrB ChangeTimecodeBackground_important__OSzLR TimecodeGroup_timecode_current_animation__kZUW_";
+        span.tabIndex = 0;
+        span.dataset.testId = testId;
+        span.setAttribute("role", "text");
+        span.setAttribute("aria-label", time);
+        
+        var innerSpan = document.createElement("span");
+        innerSpan.setAttribute("aria-hidden", "true");
+        innerSpan.textContent = time;
+        span.appendChild(innerSpan);
+        
+        return span;
+    }
+
+    function createTimecodeSlider() {
+        var input = document.createElement("input");
+        input.className = "JkKcxRVvjK7lcakkEliC qpvIbN4_hF6CqK0bjCq7 SHvrm0VRiLVwGqJJjNO8 undefined ChangeTimecodeBackground_slider__Jdu3l ChangeTimecodeBackground_important__OSzLR PlayerBarDesktopWithBackgroundProgressBar_slider__SezFn";
+        input.type = "range";
+        input.max = "134";
+        input.value = "0";
+        input.dataset.testId = "TIMECODE_SLIDER";
+        input.setAttribute("aria-label", "Управление таймкодом");
+        input.setAttribute("aria-valuetext", "0 секунд");
+        input.style.backgroundSize = "0% 100%";
+        input.style.setProperty("--seek-before-width", "0%");
+        input.style.setProperty("--buffered-width", "0%");
+        
+        var bgProgressBar = document.createElement("div");
+        bgProgressBar.className = "ChangeTimecodeBackground_backgroundProgressbar__hT_QP";
+        input.appendChild(bgProgressBar);
+        
+        return input;
+    }
+
+    function createTimecodeWrapper() {
+        var wrapper = document.createElement("div");
+        wrapper.className = "ChangeTimecodeBackground_root__B89FS ChangeTimecodeBackground_root_isPlayingTrack__2naHL";
+        wrapper.dataset.testId = "TIMECODE_WRAPPER";
+        wrapper.style.setProperty("--size-thumb", "12px");
+        wrapper.style.setProperty("--track-progress", "0%");
+        wrapper.style.setProperty("--thumb-position", "0px");
+        
+        var endTime = document.createElement("span");
+        endTime.className = "_MWOVuZRvUQdXKTMcOPx mxSPe5xpZnie9gpIqacd _3_Mxw7Si7j2g4kWjlpR Timecode_root__TLT75 Timecode_root_end__LLQsh TimecodeGroup_timecode__IJXpy ChangeTimecodeBackground_timecodeGroup__2VQ1N TimecodeGroup_timecode_end__kzP5g";
+        endTime.setAttribute("tabindex", "0");
+        endTime.dataset.testId = "TIMECODE_TIME_END";
+        endTime.setAttribute("role", "text");
+        endTime.setAttribute("aria-label", "0 секунд");
+        var endSpan = document.createElement("span");
+        endSpan.setAttribute("aria-hidden", "true");
+        endSpan.textContent = "00:00";
+        endTime.appendChild(endSpan);
+        wrapper.appendChild(endTime);
+        
+        var startTime = document.createElement("span");
+        startTime.className = "_MWOVuZRvUQdXKTMcOPx mxSPe5xpZnie9gpIqacd _3_Mxw7Si7j2g4kWjlpR Timecode_root__TLT75 Timecode_root_start__pHG5N TimecodeGroup_timecode__IJXpy TimecodeGroup_timecode_current__wv9pb ChangeTimecodeBackground_timecodeGroup__2VQ1N ChangeTimecodeBackground_timecodeGroupCurrent__aGlrB ChangeTimecodeBackground_important__OSzLR TimecodeGroup_timecode_current_animation__kZUW_";
+        startTime.setAttribute("tabindex", "0");
+        startTime.dataset.testId = "TIMECODE_TIME_START";
+        startTime.setAttribute("role", "text");
+        startTime.setAttribute("aria-label", "0 секунд");
+        startTime.style.setProperty("--timecode-position", "0px");
+        var startSpan = document.createElement("span");
+        startSpan.setAttribute("aria-hidden", "true");
+        startSpan.textContent = "00:00";
+        startTime.appendChild(startSpan);
+        wrapper.appendChild(startTime);
+        
+        var progressBar = document.createElement("div");
+        progressBar.className = "ChangeTimecodeBackground_progressbar__M93Ie PlayerBarDesktopWithBackgroundProgressBar_progressBar___Q6eK";
+        wrapper.appendChild(progressBar);
+        
+        var thumb = document.createElement("div");
+        thumb.className = "ChangeTimecodeBackground_thumb__vx6J0";
+        wrapper.appendChild(thumb);
+        
+        var slider = document.createElement("input");
+        slider.className = "JkKcxRVvjK7lcakkEliC qpvIbN4_hF6CqK0bjCq7 SHvrm0VRiLVwGqJJjNO8 undefined ChangeTimecodeBackground_slider__Jdu3l ChangeTimecodeBackground_important__OSzLR PlayerBarDesktopWithBackgroundProgressBar_slider__SezFn";
+        slider.type = "range";
+        slider.max = "100";
+        slider.value = "0";
+        slider.setAttribute("aria-valuetext", "0 секунд");
+        slider.setAttribute("aria-label", "Управление таймкодом");
+        slider.dataset.testId = "TIMECODE_SLIDER";
+        slider.style.backgroundSize = "0% 100%";
+        slider.style.setProperty("--seek-before-width", "0%");
+        slider.style.setProperty("--buffered-width", "0%");
+        wrapper.appendChild(slider);
+        
+        var bgProgressBar = document.createElement("div");
+        bgProgressBar.className = "ChangeTimecodeBackground_backgroundProgressbar__hT_QP";
+        wrapper.appendChild(bgProgressBar);
+        
+        return wrapper;
+    }
+
+    function createCoverContainer() {
+        var container = document.createElement("div");
+        container.className = "qaIScXjx1qyXuaIHXQIo _7gw1qGE6BeUAdSMbhRx ZcpulvHgF_wsgzB8Hye9 PlayerBarDesktopWithBackgroundProgressBar_coverContainer__dkNCG";
+        container.dataset.testId = "PLAYERBAR_DESKTOP_COVER_CONTAINER";
+        
+        var img = document.createElement("img");
+        img.className = "qQ7GQU14EkggPBC6jdeS fosYvyLDok3Kjj9OWmxG PlayerBarDesktopWithBackgroundProgressBar_cover__MKmEt";
+        img.alt = "";
+        img.loading = "eager";
+        img.dataset.testId = "ENTITY_COVER_IMAGE";
+        img.src = "https://avatars.yandex.net/get-music-content/4796762/7669fe96.a.15647955-1/100x100";
+        container.appendChild(img);
+        
+        return container;
+    }
+
+    function createInfoDiv() {
+        var infoDiv = document.createElement("div");
+        infoDiv.className = "PlayerBarDesktopWithBackgroundProgressBar_info__YnvZ_";
+        
+        var infoCard = document.createElement("div");
+        infoCard.className = "PlayerBarDesktopWithBackgroundProgressBar_infoCard__i0cbW";
+        infoDiv.appendChild(infoCard);
+        
+        var coverContainer = createCoverContainer();
+        infoCard.appendChild(coverContainer);
+        
+        var description = createTrackDescription();
+        infoCard.appendChild(description);
+        
+        return infoDiv;
+    }
+
+    function createHomePlayer() {
+        var section = document.createElement("section");
+        section.className = "PlayerBarDesktopWithBackgroundProgressBar_root__bpmwN PlayerBarDesktopWithBackgroundProgressBar_important__HzXrK CommonLayout_playerBar__zXRxq PlayerBar_root__cXUnU";
+        section.dataset.testId = "PLAYERBAR_DESKTOP";
+        section.setAttribute("aria-labelledby", "player-region");
+        section.style.setProperty("--player-average-color-background", "hsl(240, 60%, 20%)");
+        
+        var playerBarDiv = document.createElement("div");
+        playerBarDiv.className = "PlayerBarDesktopWithBackgroundProgressBar_playerBar__mp0p9";
+        section.appendChild(playerBarDiv);
+        
+        var timecodeWrapper = createTimecodeWrapper();
+        playerBarDiv.appendChild(timecodeWrapper);
+        
+        var playerDiv = createPlayerDiv();
+        playerBarDiv.appendChild(playerDiv);
+        
+        return section;
+    }
+
     function ensureRoot(host) {
         var existing = host.querySelector("#" + ROOT_ID);
         if (existing instanceof HTMLDivElement) return existing;
@@ -582,10 +1414,35 @@
             var root = ensureRoot(host);
             scheduleLayoutResync(root);
             root.hidden = !options.visible;
+            
+            ensurePlayerBar(host, options.visible);
+            
             if (!options.visible) return;
 
             syncUi(root);
+            ensureVibeMenuOpen();
         }, null, "Render failed");
+    }
+
+    function ensurePlayerBar(host, shouldShow) {
+        safeRun(function() {
+            var existingPlayer = document.querySelector('[data-test-id="PLAYERBAR_DESKTOP"]');
+            var inVibeContext = isMyWaveContext();
+            var canShowInHost = host instanceof HTMLElement;
+            
+            if (inVibeContext && shouldShow && canShowInHost && !existingPlayer) {
+                var player = createHomePlayer();
+                host.appendChild(player);
+                syncPlayerData(player);
+            } else if (existingPlayer && inVibeContext && shouldShow && canShowInHost) {
+                if (existingPlayer.parentElement !== host) {
+                    host.appendChild(existingPlayer);
+                }
+                syncPlayerData(existingPlayer);
+            } else if (existingPlayer && (!inVibeContext || !shouldShow || !canShowInHost)) {
+                existingPlayer.remove();
+            }
+        }, null, "Failed to ensure player bar");
     }
 
     function mount() {
