@@ -27,7 +27,7 @@
                     "min": -150,
                     "max": 0,
                     "step": 1,
-                    "defaultParameter": -70
+                    "defaultParameter": -90
                 }
             ]
         }
