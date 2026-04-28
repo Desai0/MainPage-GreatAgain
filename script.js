@@ -1,12 +1,14 @@
 (function() {
     var addonConfig = {
-        name: "YandexMusicOldHomeUI"
+        name: "YM Old Home UI",
+        fallbackNames: ["YandexMusicOldHomeUI"]
     };
 
     var ROOT_ID = "ps-vibe-controls";
     var MAIN_PAGE_TEST_ID = "MAIN_PAGE";
     var NAV_VIBE_TEST_ID = "NAVBAR_NAVIGATION_ITEM_HOME";
     var PLAYERBAR_TEST_ID = "PLAYERBAR_DESKTOP";
+    var CUSTOM_PLAYER_ATTR = "data-ps-custom-player";
     var PLAYER_PLAY_TEST_ID = "PLAY_BUTTON";
     var PLAYER_PAUSE_TEST_ID = "PAUSE_BUTTON";
     var VIBE_ANIMATION_TEST_ID = "VIBE_ANIMATION";
@@ -14,10 +16,17 @@
     var SWIPER_LAYOUT_SHIFT_CLASS = "ps-swiper-layout-shifted";
     var SHIFTED_LAYOUT_OFFSET_PX = 0;
     var LAYOUT_RESYNC_DELAY_MS = 180;
-    var UI_REFRESH_INTERVAL_MS = 250;
     var VIBE_TRIGGER_ARIA_RE = /включить мою волну/i;
     var LOG_PREFIX = "[test_addon]";
     var pendingLayoutResyncTimer = 0;
+    var pendingPlayerStateSyncTimers = [];
+    var pendingTimecodeSyncTimer = 0;
+    var vibeMenuState = {
+        menu: null,
+        trigger: null,
+        itemsByIcon: {},
+        observer: null
+    };
 
     function unwrapSetting(entry, fallback) {
         if (entry && typeof entry === "object" && !Array.isArray(entry)) {
@@ -27,8 +36,49 @@
         return typeof entry !== "undefined" ? entry : fallback;
     }
 
-    function getAddonSettings(addonName) {
-        return window.pulsesyncApi?.getSettings(addonName) ?? {
+    function getAddonSettingNames() {
+        var names = [addonConfig.name];
+        for (var i = 0; i < addonConfig.fallbackNames.length; i += 1) {
+            var fallbackName = addonConfig.fallbackNames[i];
+            if (names.indexOf(fallbackName) === -1) {
+                names.push(fallbackName);
+            }
+        }
+        return names;
+    }
+
+    function getAddonSettingsStore() {
+        var api = getPulseSyncApi();
+        if (!api || typeof api.getSettings !== "function") {
+            return {
+                getCurrent: function() {
+                    return {};
+                },
+                onChange: function() {
+                    return function() {};
+                }
+            };
+        }
+
+        var names = getAddonSettingNames();
+        var fallbackStore = null;
+
+        for (var i = 0; i < names.length; i += 1) {
+            try {
+                var store = api.getSettings(names[i]);
+                if (!store || typeof store.getCurrent !== "function") continue;
+                if (!fallbackStore) fallbackStore = store;
+
+                var current = store.getCurrent();
+                if (current && typeof current === "object" && Object.keys(current).length) {
+                    return store;
+                }
+            } catch (error) {
+                logError("Failed to get settings store for " + names[i], error);
+            }
+        }
+
+        return fallbackStore || {
             getCurrent: function() {
                 return {};
             },
@@ -40,6 +90,15 @@
 
     function readBooleanSetting(settings, key, fallback) {
         return Boolean(unwrapSetting(settings[key], fallback));
+    }
+
+    function readNumberSetting(settings, key, fallback) {
+        var value = Number(unwrapSetting(settings[key], fallback));
+        return Number.isFinite(value) ? value : fallback;
+    }
+
+    function getPulseSyncApi() {
+        return window.pulsesyncApi || null;
     }
 
     function logError(message, error) {
@@ -55,6 +114,20 @@
             if (label) logError(label, error);
             return fallback;
         }
+    }
+
+    function callPlayerApi(methodName, arg) {
+        return safeRun(function() {
+            var api = getPulseSyncApi();
+            var method = api && api[methodName];
+            if (typeof method !== "function") return false;
+            if (typeof arg === "undefined") {
+                method.call(api);
+            } else {
+                method.call(api, arg);
+            }
+            return true;
+        }, false, "Failed to call player api: " + methodName);
     }
 
     function unwrapObservable(value) {
@@ -87,8 +160,54 @@
 
     function isPlaying() {
         return safeRun(function() {
-            return !!document.querySelector('[data-test-id="' + PLAYER_PAUSE_TEST_ID + '"]');
+            var api = getPulseSyncApi();
+            if (typeof api?.isPlaying === "function") {
+                return !!api.isPlaying();
+            }
+
+            var customPlayer = findCustomPlayerBar();
+            var buttons = document.querySelectorAll('[data-test-id="' + PLAYER_PAUSE_TEST_ID + '"]');
+            for (var i = 0; i < buttons.length; i += 1) {
+                var button = buttons[i];
+                if (!(button instanceof HTMLElement)) continue;
+                if (customPlayer && customPlayer.contains(button)) continue;
+                return true;
+            }
+
+            return false;
         }, false, "Failed to read playing state");
+    }
+
+    function setAttributeIfChanged(element, name, value) {
+        if (!(element instanceof Element)) return;
+        var nextValue = String(value);
+        if (element.getAttribute(name) !== nextValue) {
+            element.setAttribute(name, nextValue);
+        }
+    }
+
+    function setDatasetIfChanged(element, key, value) {
+        if (!(element instanceof HTMLElement)) return;
+        var nextValue = String(value);
+        if (element.dataset[key] !== nextValue) {
+            element.dataset[key] = nextValue;
+        }
+    }
+
+    function setTextIfChanged(element, value) {
+        if (!(element instanceof Node)) return;
+        var nextValue = String(value);
+        if (element.textContent !== nextValue) {
+            element.textContent = nextValue;
+        }
+    }
+
+    function setStylePropertyIfChanged(element, name, value) {
+        if (!(element instanceof HTMLElement)) return;
+        var nextValue = String(value);
+        if (element.style.getPropertyValue(name) !== nextValue) {
+            element.style.setProperty(name, nextValue);
+        }
     }
 
     function createSvg(className, symbolId) {
@@ -174,7 +293,7 @@
 
     function syncSwiperLayoutState(root) {
         safeRun(function() {
-            var shifted = isSwiperHidden();
+            var shifted = !isSwiperHidden();
             var mainPage = findMainPage();
             var nodes = document.querySelectorAll('[data-test-id="' + VIBE_ANIMATION_TEST_ID + '"]');
 
@@ -199,10 +318,7 @@
         safeRun(function() {
             if (!(root instanceof HTMLElement) || !(host instanceof HTMLElement)) return;
 
-            root.style.removeProperty("--ps-root-left");
             root.style.removeProperty("--ps-root-shift");
-
-            if (!shifted) return;
 
             var hostRect = host.getBoundingClientRect();
             var targetNode = null;
@@ -225,11 +341,13 @@
 
             var vibeRect = targetNode.getBoundingClientRect();
             var targetCenter = vibeRect.left - hostRect.left + (vibeRect.width / 2) + SHIFTED_LAYOUT_OFFSET_PX;
+            var mirroredCenter = hostRect.width - targetCenter;
             var horizontalPadding = 24;
             var rootWidth = Math.min(328, Math.max(0, hostRect.width - horizontalPadding));
             var minCenter = rootWidth / 2 + 12;
             var maxCenter = hostRect.width - rootWidth / 2 - 12;
-            var clampedCenter = Math.max(minCenter, Math.min(maxCenter, targetCenter));
+            var nextCenter = shifted ? targetCenter : mirroredCenter;
+            var clampedCenter = Math.max(minCenter, Math.min(maxCenter, nextCenter));
 
             root.style.setProperty("--ps-root-left", clampedCenter + "px");
             root.style.setProperty("--ps-root-shift", "0px");
@@ -297,6 +415,70 @@
         }, null, "Failed to find player bar");
     }
 
+    function findNativePlayerBarRoot() {
+        return safeRun(function() {
+            var playerBars = document.querySelectorAll('[data-test-id="' + PLAYERBAR_TEST_ID + '"]');
+            for (var i = 0; i < playerBars.length; i += 1) {
+                var playerBar = playerBars[i];
+                if (!(playerBar instanceof HTMLElement)) continue;
+                if (playerBar.getAttribute(CUSTOM_PLAYER_ATTR) === "true") continue;
+                return playerBar;
+            }
+            return null;
+        }, null, "Failed to find native player bar");
+    }
+
+    function findNativeArtistLink(href, text) {
+        return safeRun(function() {
+            var normalizedHref = String(href || "").trim();
+            var normalizedText = String(text || "").trim();
+            var customPlayer = findCustomPlayerBar();
+            var links = document.querySelectorAll('a[href], [data-test-id="SEPARATED_ARTIST_TITLE"]');
+
+            for (var i = 0; i < links.length; i += 1) {
+                var link = links[i];
+                if (!(link instanceof HTMLAnchorElement)) continue;
+                if (customPlayer && customPlayer.contains(link)) continue;
+                if (link.closest('[data-test-id="FULLSCREEN_PLAYER_MODAL"]')) continue;
+                if (link.closest('[data-test-id="PLAY_QUEUE"]')) continue;
+
+                var linkHref = (link.getAttribute("href") || "").trim();
+                var linkText = (link.textContent || "").trim();
+
+                if (normalizedHref && normalizedHref !== "#" && linkHref === normalizedHref) {
+                    return link;
+                }
+                if (normalizedText && linkText === normalizedText) {
+                    return link;
+                }
+            }
+
+            var vibeArtistCoverLink = document.querySelector('a[class*="VibeArtistCover_root__"]');
+            if (vibeArtistCoverLink instanceof HTMLAnchorElement) {
+                if ((!customPlayer || !customPlayer.contains(vibeArtistCoverLink)) &&
+                    (!normalizedHref || normalizedHref === "#" || vibeArtistCoverLink.getAttribute("href") === normalizedHref)) {
+                    return vibeArtistCoverLink;
+                }
+            }
+
+            return null;
+        }, null, "Failed to find native artist link");
+    }
+
+    function bindArtistLink(anchor, artist) {
+        safeRun(function() {
+            if (!(anchor instanceof HTMLAnchorElement)) return;
+            anchor.addEventListener("click", function(event) {
+                var nativeLink = findNativeArtistLink(artist && artist.href, artist && artist.text);
+                if (nativeLink) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    dispatchClick(nativeLink);
+                }
+            });
+        }, null, "Failed to bind artist link");
+    }
+
     function findPlayerPlayButton(root) {
         return safeRun(function() {
             var selector = '[data-test-id="' + PLAYER_PLAY_TEST_ID + '"]';
@@ -343,9 +525,490 @@
         return;
     }
 
+    function isCustomPlayerElement(element) {
+        if (!(element instanceof HTMLElement)) return false;
+        var player = findCustomPlayerBar();
+        return !!(player && player.contains(element));
+    }
+
+    function findNativeVibeMenuTrigger() {
+        return safeRun(function() {
+            var triggers = document.querySelectorAll('button[aria-label="Контекстное меню"][aria-haspopup="dialog"]');
+            for (var i = 0; i < triggers.length; i += 1) {
+                var trigger = triggers[i];
+                if (!(trigger instanceof HTMLButtonElement)) continue;
+                if (isCustomPlayerElement(trigger)) continue;
+                return trigger;
+            }
+            return null;
+        }, null, "Failed to find native vibe menu trigger");
+    }
+
+    function findNativeFullscreenTrigger() {
+        return safeRun(function() {
+            var candidates = document.querySelectorAll('.VibePlayerBar_center__yug8i[role="button"][aria-label="Плеер на весь экран"], [class*="VibePlayerBar_center__"][role="button"][aria-label="Плеер на весь экран"]');
+            for (var i = 0; i < candidates.length; i += 1) {
+                var candidate = candidates[i];
+                if (!(candidate instanceof HTMLElement)) continue;
+                if (isCustomPlayerElement(candidate)) continue;
+                return candidate;
+            }
+            return null;
+        }, null, "Failed to find native fullscreen trigger");
+    }
+
+    function openNativeFullscreen(event) {
+        return safeRun(function() {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            var trigger = findNativeFullscreenTrigger();
+            return trigger ? dispatchClick(trigger) : false;
+        }, false, "Failed to open native fullscreen");
+    }
+
+    function getIconIdFromElement(element) {
+        if (!(element instanceof HTMLElement)) return "";
+        var use = element.querySelector("use");
+        var href = use ? (use.getAttribute("xlink:href") || use.getAttribute("href") || "") : "";
+        var hashIndex = href.indexOf("#");
+        return hashIndex >= 0 ? href.slice(hashIndex + 1) : "";
+    }
+
+    function cacheVibeMenuButtons(menu) {
+        return safeRun(function() {
+            vibeMenuState.itemsByIcon = {};
+            if (!(menu instanceof HTMLElement)) return vibeMenuState.itemsByIcon;
+
+            var buttons = menu.querySelectorAll(".VibeContextMenu_menuItem__RK1Sg");
+            for (var i = 0; i < buttons.length; i += 1) {
+                var button = buttons[i];
+                if (!(button instanceof HTMLElement)) continue;
+                var iconId = getIconIdFromElement(button);
+                if (!iconId) continue;
+                vibeMenuState.itemsByIcon[iconId] = button;
+            }
+
+            return vibeMenuState.itemsByIcon;
+        }, {}, "Failed to cache vibe menu buttons");
+    }
+
+    function detachVibeMenuObserver() {
+        safeRun(function() {
+            if (vibeMenuState.observer) {
+                vibeMenuState.observer.disconnect();
+                vibeMenuState.observer = null;
+            }
+        }, null, "Failed to detach vibe menu observer");
+    }
+
+    function attachVibeMenuObserver(menu) {
+        safeRun(function() {
+            detachVibeMenuObserver();
+            if (!(menu instanceof HTMLElement)) return;
+
+            vibeMenuState.observer = new MutationObserver(function() {
+                if (!vibeMenuState.menu || !vibeMenuState.menu.isConnected) {
+                    vibeMenuState.menu = null;
+                    vibeMenuState.itemsByIcon = {};
+                    return;
+                }
+
+                cacheVibeMenuButtons(vibeMenuState.menu);
+            });
+
+            vibeMenuState.observer.observe(menu, {
+                childList: true,
+                subtree: true
+            });
+        }, null, "Failed to attach vibe menu observer");
+    }
+
+    function ensureVibeMenuBackend() {
+        return safeRun(function() {
+            if (!(vibeMenuState.menu instanceof HTMLElement) || !vibeMenuState.menu.isConnected) {
+                vibeMenuState.menu = null;
+            }
+
+            if (!vibeMenuState.menu) {
+                var trigger = findNativeVibeMenuTrigger();
+                vibeMenuState.trigger = trigger instanceof HTMLElement ? trigger : null;
+
+                if (trigger && trigger.getAttribute("aria-expanded") !== "true") {
+                    dispatchClick(trigger);
+                }
+
+                var menu = document.querySelector(".VibeContextMenu_root__872YP");
+                if (!(menu instanceof HTMLElement)) return false;
+
+                vibeMenuState.menu = menu;
+                attachVibeMenuObserver(menu);
+            }
+
+            cacheVibeMenuButtons(vibeMenuState.menu);
+            return true;
+        }, false, "Failed to ensure vibe menu backend");
+    }
+
+    async function ensureVibeMenuBackendAsync() {
+        try {
+            if (ensureVibeMenuBackend()) return true;
+
+            var trigger = findNativeVibeMenuTrigger();
+            vibeMenuState.trigger = trigger instanceof HTMLElement ? trigger : null;
+            if (trigger && trigger.getAttribute("aria-expanded") !== "true") {
+                dispatchClick(trigger);
+            }
+
+            var menu = await waitFor(function() {
+                var nextMenu = document.querySelector(".VibeContextMenu_root__872YP");
+                return nextMenu instanceof HTMLElement ? nextMenu : null;
+            }, 1500, 60);
+
+            if (!(menu instanceof HTMLElement)) return false;
+
+            vibeMenuState.menu = menu;
+            attachVibeMenuObserver(menu);
+            cacheVibeMenuButtons(menu);
+            return true;
+        } catch (error) {
+            logError("Failed to ensure vibe menu backend async", error);
+            return false;
+        }
+    }
+
+    function findNativeMenuAction(iconId) {
+        return safeRun(function() {
+            if (!iconId) return null;
+
+            var cached = vibeMenuState.itemsByIcon[iconId];
+            if (cached instanceof HTMLElement && cached.isConnected) return cached;
+
+            if (!ensureVibeMenuBackend()) return null;
+
+            cached = vibeMenuState.itemsByIcon[iconId];
+            return cached instanceof HTMLElement ? cached : null;
+        }, null, "Failed to find native menu action: " + iconId);
+    }
+
+    async function waitForNativeMenuAction(iconId) {
+        if (!iconId) return null;
+
+        var cached = findNativeMenuAction(iconId);
+        if (cached) return cached;
+
+        var menuReady = await ensureVibeMenuBackendAsync();
+        if (!menuReady) return null;
+
+        return await waitFor(function() {
+            return findNativeMenuAction(iconId);
+        }, 1200, 60);
+    }
+
+    async function clickNativeMenuAction(iconId) {
+        try {
+            var button = await waitForNativeMenuAction(iconId);
+            return button ? dispatchClick(button) : false;
+        } catch (error) {
+            logError("Failed to click native menu action: " + iconId, error);
+            return false;
+        }
+    }
+
+    function findNativeRepeatAction() {
+        return safeRun(function() {
+            var repeatButton = findNativeMenuAction("repeat_xs") || findNativeMenuAction("repeat_one_xs");
+            if (repeatButton) return repeatButton;
+
+            var menu = vibeMenuState.menu instanceof HTMLElement ? vibeMenuState.menu : document.querySelector(".VibeContextMenu_root__872YP");
+            if (!(menu instanceof HTMLElement)) return null;
+
+            var buttons = menu.querySelectorAll(".VibeContextMenu_menuItem__RK1Sg");
+            for (var i = 0; i < buttons.length; i += 1) {
+                var button = buttons[i];
+                if (!(button instanceof HTMLElement)) continue;
+                var text = (button.textContent || "").trim();
+                if (/^повтор/i.test(text)) return button;
+            }
+
+            return null;
+        }, null, "Failed to find native repeat action");
+    }
+
+    async function clickNativeRepeatAction() {
+        try {
+            var button = findNativeRepeatAction();
+            if (!button) {
+                var menuReady = await ensureVibeMenuBackendAsync();
+                if (menuReady) {
+                    button = await waitFor(function() {
+                        return findNativeRepeatAction();
+                    }, 1200, 60);
+                }
+            }
+
+            var clicked = button ? dispatchClick(button) : false;
+            if (clicked) {
+                schedulePlayerStateSync();
+            }
+            return clicked;
+        } catch (error) {
+            logError("Failed to click native repeat action", error);
+            return false;
+        }
+    }
+
+    function getNativeRepeatState() {
+        return safeRun(function() {
+            var button = findNativeRepeatAction();
+            if (!(button instanceof HTMLElement)) return "off";
+
+            var iconId = getIconIdFromElement(button);
+            var isActive = /important_active/i.test(button.className || "");
+
+            if (iconId === "repeat_one_xs") return "one";
+            if (iconId === "repeat_xs" && isActive) return "all";
+            return "off";
+        }, "off", "Failed to read native repeat state");
+    }
+
+    function isTrackLiked() {
+        return safeRun(function() {
+            var api = getPulseSyncApi();
+            return typeof api?.isTrackLiked === "function" ? !!api.isTrackLiked() : false;
+        }, false, "Failed to read like state");
+    }
+
+    function isTrackDisliked() {
+        return safeRun(function() {
+            var api = getPulseSyncApi();
+            return typeof api?.isTrackDisliked === "function" ? !!api.isTrackDisliked() : false;
+        }, false, "Failed to read dislike state");
+    }
+
+    function getTrackDerivedColors() {
+        return safeRun(function() {
+            var api = getPulseSyncApi();
+            if (!api || typeof api.getCurrentTrack !== "function") return null;
+            var track = api.getCurrentTrack();
+            if (!track || typeof track !== "object") return null;
+            return track.derivedColors && typeof track.derivedColors === "object" ? track.derivedColors : null;
+        }, null, "Failed to read track derived colors");
+    }
+
+    function toggleLike() {
+        callPlayerApi(isTrackLiked() ? "unlikeTrack" : "likeTrack");
+        schedulePlayerStateSync();
+    }
+
+    function toggleDislike() {
+        callPlayerApi(isTrackDisliked() ? "undislikeTrack" : "dislikeTrack");
+        schedulePlayerStateSync();
+    }
+
+    function normalizeArtistList(artists) {
+        var normalized = [];
+        if (!Array.isArray(artists)) return normalized;
+
+        for (var i = 0; i < artists.length; i += 1) {
+            var artist = artists[i];
+            var text = String(artist?.text || "").trim();
+            if (!text) continue;
+            normalized.push({
+                text: text,
+                href: artist && artist.href ? artist.href : "#"
+            });
+        }
+
+        return normalized;
+    }
+
+    function areArtistListsEqual(left, right) {
+        if (left.length !== right.length) return false;
+
+        for (var i = 0; i < left.length; i += 1) {
+            if (left[i].text !== right[i].text) return false;
+            if ((left[i].href || "#") !== (right[i].href || "#")) return false;
+        }
+
+        return true;
+    }
+
+    function readRenderedArtists(container) {
+        var artists = [];
+        if (!(container instanceof HTMLElement)) return artists;
+
+        var links = container.querySelectorAll('[data-test-id="SEPARATED_ARTIST_TITLE"]');
+        for (var i = 0; i < links.length; i += 1) {
+            var link = links[i];
+            if (!(link instanceof HTMLAnchorElement)) continue;
+            var text = link.textContent.trim();
+            if (!text) continue;
+            artists.push({
+                text: text,
+                href: link.getAttribute("href") || "#"
+            });
+        }
+
+        return artists;
+    }
+
+    function setUseHref(element, symbolId) {
+        safeRun(function() {
+            if (!(element instanceof HTMLElement) && !(element instanceof SVGElement)) return;
+            var use = element.querySelector("use");
+            if (!use || !symbolId) return;
+            var nextHref = "/icons/sprite.svg#" + symbolId;
+            var currentHref = use.getAttribute("xlink:href") || use.getAttribute("href") || "";
+            if (currentHref === nextHref) return;
+            use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", nextHref);
+        }, null, "Failed to set use href");
+    }
+
+    function setPressedState(button, pressed, stateName) {
+        safeRun(function() {
+            if (!(button instanceof HTMLElement)) return;
+            setAttributeIfChanged(button, "aria-pressed", pressed ? "true" : "false");
+            if (stateName) {
+                setDatasetIfChanged(button, "state", stateName);
+            }
+        }, null, "Failed to set pressed state");
+    }
+
+    function findCustomPlayerBar() {
+        return safeRun(function() {
+            var host = findMainPage();
+            if (!(host instanceof HTMLElement)) return null;
+            var player = host.querySelector("[" + CUSTOM_PLAYER_ATTR + '="true"]');
+            return player instanceof HTMLElement ? player : null;
+        }, null, "Failed to find custom player bar");
+    }
+
+    function syncCustomPlayerState() {
+        safeRun(function() {
+            var player = findCustomPlayerBar();
+            if (player) {
+                syncPlayerData(player);
+            }
+
+            var root = document.getElementById(ROOT_ID);
+            if (root instanceof HTMLElement) {
+                syncUi(root);
+            }
+        }, null, "Failed to sync custom player state");
+    }
+
+    function schedulePlayerStateSync(delays) {
+        safeRun(function() {
+            while (pendingPlayerStateSyncTimers.length) {
+                clearTimeout(pendingPlayerStateSyncTimers.pop());
+            }
+
+            var queue = Array.isArray(delays) && delays.length ? delays : [0, 120, 280, 600];
+            for (var i = 0; i < queue.length; i += 1) {
+                pendingPlayerStateSyncTimers.push(setTimeout(function() {
+                    syncCustomPlayerState();
+                }, queue[i]));
+            }
+        }, null, "Failed to schedule player state sync");
+    }
+
+    function getPlayerProgress() {
+        return safeRun(function() {
+            return unwrapObservable(window.sonataState?.playerState?.progress) || null;
+        }, null, "Failed to read player progress");
+    }
+
+    function clampNumber(value, min, max) {
+        var number = Number(value);
+        if (!Number.isFinite(number)) return min;
+        return Math.max(min, Math.min(max, number));
+    }
+
+    function formatTimecode(seconds) {
+        var totalSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+        var minutes = Math.floor(totalSeconds / 60);
+        var restSeconds = totalSeconds % 60;
+        return minutes + ":" + String(restSeconds).padStart(2, "0");
+    }
+
+    function syncTimecode(playerEl) {
+        safeRun(function() {
+            if (!(playerEl instanceof HTMLElement)) return;
+            var progress = getPlayerProgress();
+            if (!progress) return;
+
+            var duration = Number(progress.duration) || 0;
+            var position = clampNumber(progress.position, 0, duration || Number.MAX_SAFE_INTEGER);
+            var loaded = clampNumber(progress.loaded, position, duration || Number.MAX_SAFE_INTEGER);
+            var progressPercent = duration > 0 ? (position / duration) * 100 : 0;
+            var bufferedPercent = duration > 0 ? (loaded / duration) * 100 : progressPercent;
+            var progressValue = progressPercent.toFixed(3) + "%";
+            var bufferedValue = bufferedPercent.toFixed(3) + "%";
+
+            var wrapper = playerEl.querySelector('[data-test-id="TIMECODE_WRAPPER"]');
+            if (!(wrapper instanceof HTMLElement)) return;
+
+            setStylePropertyIfChanged(wrapper, "--track-progress", progressValue);
+            setStylePropertyIfChanged(wrapper, "--thumb-position", progressValue);
+            setStylePropertyIfChanged(wrapper, "--buffered-width", bufferedValue);
+
+            var currentTime = playerEl.querySelector('[data-test-id="TIMECODE_TIME_START"]');
+            if (currentTime instanceof HTMLElement) {
+                var currentText = formatTimecode(position);
+                setAttributeIfChanged(currentTime, "aria-label", currentText);
+                setStylePropertyIfChanged(currentTime, "--timecode-position", progressValue);
+                setTextIfChanged(currentTime.querySelector("span"), currentText);
+            }
+
+            var endTime = playerEl.querySelector('[data-test-id="TIMECODE_TIME_END"]');
+            if (endTime instanceof HTMLElement) {
+                var endText = formatTimecode(duration);
+                setAttributeIfChanged(endTime, "aria-label", endText);
+                setTextIfChanged(endTime.querySelector("span"), endText);
+            }
+
+            var slider = playerEl.querySelector('[data-test-id="TIMECODE_SLIDER"]');
+            if (slider instanceof HTMLInputElement) {
+                var maxValue = String(Math.max(0, Math.floor(duration)));
+                var currentValue = String(Math.max(0, Math.floor(position)));
+                if (slider.max !== maxValue) slider.max = maxValue;
+                if (slider.value !== currentValue) slider.value = currentValue;
+                setAttributeIfChanged(slider, "aria-valuetext", formatTimecode(position));
+                slider.style.backgroundSize = progressValue + " 100%";
+                setStylePropertyIfChanged(slider, "--seek-before-width", progressValue);
+                setStylePropertyIfChanged(slider, "--buffered-width", bufferedValue);
+            }
+        }, null, "Failed to sync timecode");
+    }
+
+    function scheduleTimecodeSync() {
+        safeRun(function() {
+            if (pendingTimecodeSyncTimer) return;
+            pendingTimecodeSyncTimer = setTimeout(function() {
+                pendingTimecodeSyncTimer = 0;
+                var player = findCustomPlayerBar();
+                if (!player) return;
+                syncTimecode(player);
+                if (isPlaying()) {
+                    scheduleTimecodeSync();
+                }
+            }, 500);
+        }, null, "Failed to schedule timecode sync");
+    }
+
     function getTrackDataFromDom() {
         return safeRun(function() {
-            var ourPlayer = document.querySelector('[data-test-id="PLAYERBAR_DESKTOP"]');
+            var ourPlayer = findCustomPlayerBar();
+            var vibeMetaRoot = document.querySelector('.VibePage_meta__kWwRE');
+            var vibeArtistCoverLink = document.querySelector('a[class*="VibeArtistCover_root__"]');
+            var vibeArtistCoverHref = (
+                vibeArtistCoverLink instanceof HTMLAnchorElement &&
+                (!ourPlayer || !ourPlayer.contains(vibeArtistCoverLink))
+            )
+                ? (vibeArtistCoverLink.getAttribute("href") || "#")
+                : "#";
 
             // Cover from VibePage AlbumCover
             var vibeCover = document.querySelector('[class*="AlbumCover_cover__"]');
@@ -373,13 +1036,13 @@
                     if (artistLink && !ourPlayer.contains(artistLink)) {
                         artistsFromTitle.push({
                             text: artistLink.textContent.trim(),
-                            href: artistLink.getAttribute("href") || "#"
+                            href: artistLink.getAttribute("href") || vibeArtistCoverHref || "#"
                         });
                     } else {
                         // No link found, use text from title
                         artistsFromTitle.push({
                             text: artistName,
-                            href: "#"
+                            href: vibeArtistCoverHref || "#"
                         });
                     }
                 } else {
@@ -397,19 +1060,50 @@
                 }
             }
 
-            // Artists — skip elements inside our player
-            var allArtists = document.querySelectorAll('[data-test-id="SEPARATED_ARTIST_TITLE"]');
-            var artistLinks = [];
-            for (var k = 0; k < allArtists.length; k++) {
-                if (!ourPlayer || !ourPlayer.contains(allArtists[k])) {
-                    artistLinks.push(allArtists[k]);
+            var finalArtists = artistsFromTitle;
+
+            if (vibeMetaRoot instanceof HTMLElement) {
+                var vibeArtistRoot = vibeMetaRoot.querySelector('[class*="SeparatedArtists_root"]');
+                if (vibeArtistRoot instanceof HTMLElement) {
+                    var vibeArtists = vibeArtistRoot.querySelectorAll('[data-test-id="SEPARATED_ARTIST_TITLE"]');
+                    var collectedVibeArtists = [];
+
+                    for (var k = 0; k < vibeArtists.length; k += 1) {
+                        var vibeArtist = vibeArtists[k];
+                        if (!(vibeArtist instanceof HTMLElement)) continue;
+                        var vibeArtistText = vibeArtist.textContent.trim();
+                        if (!vibeArtistText) continue;
+                        var vibeArtistHref = vibeArtist.getAttribute("href") || vibeArtistCoverHref || "#";
+                        collectedVibeArtists.push({
+                            text: vibeArtistText,
+                            href: vibeArtistHref
+                        });
+                    }
+
+                    if (collectedVibeArtists.length) {
+                        finalArtists = collectedVibeArtists;
+                    }
+                }
+            } else {
+                // Fallback outside Vibe page: skip elements inside our player and fullscreen/queue overlays
+                var allArtists = document.querySelectorAll('[data-test-id="SEPARATED_ARTIST_TITLE"]');
+                var artistLinks = [];
+                for (var m = 0; m < allArtists.length; m += 1) {
+                    var artistNode = allArtists[m];
+                    if (!(artistNode instanceof HTMLElement)) continue;
+                    if (ourPlayer && ourPlayer.contains(artistNode)) continue;
+                    if (artistNode.closest('[data-test-id="FULLSCREEN_PLAYER_MODAL"]')) continue;
+                    if (artistNode.closest('[data-test-id="PLAY_QUEUE"]')) continue;
+                    artistLinks.push({
+                        text: artistNode.textContent.trim(),
+                        href: artistNode.getAttribute("href") || "#"
+                    });
+                }
+
+                if (artistLinks.length > 0) {
+                    finalArtists = artistLinks;
                 }
             }
-
-            // Use artists from title if no artists found outside player
-            var finalArtists = artistLinks.length > 0 
-                ? artistLinks.map(function(a) { return { text: a.textContent.trim(), href: a.getAttribute("href") }; })
-                : artistsFromTitle;
 
             if (!coverSrc && !title) return null;
             return {
@@ -426,70 +1120,148 @@
         safeRun(function() {
             var data = getTrackDataFromDom();
             if (!data) return;
+            var normalizedArtists = normalizeArtistList(data.artists);
+            var nativePlayerBar = findNativePlayerBarRoot();
+            var derivedColors = getTrackDerivedColors();
 
             var cover = playerEl.querySelector('[data-test-id="ENTITY_COVER_IMAGE"]');
             if (cover) {
-                cover.src = data.coverSrc;
-                cover.srcset = data.coverSrcset;
+                if (cover.src !== data.coverSrc) {
+                    cover.src = data.coverSrc;
+                }
+                if ((cover.srcset || "") !== (data.coverSrcset || "")) {
+                    cover.srcset = data.coverSrcset;
+                }
             }
 
             var titleLink = playerEl.querySelector('[data-test-id="TRACK_TITLE"]');
             if (titleLink) {
-                titleLink.setAttribute("aria-label", "Трек " + data.title);
-                titleLink.href = data.titleHref || "#";
+                var nextTitleAria = "Трек " + data.title;
+                if (titleLink.getAttribute("aria-label") !== nextTitleAria) {
+                    titleLink.setAttribute("aria-label", nextTitleAria);
+                }
+                if ((titleLink.getAttribute("href") || "#") !== (data.titleHref || "#")) {
+                    titleLink.href = data.titleHref || "#";
+                }
                 var titleSpan = titleLink.querySelector(".Meta_title__GGBnH");
-                if (titleSpan) titleSpan.textContent = data.title;
+                if (titleSpan && titleSpan.textContent !== data.title) {
+                    titleSpan.textContent = data.title;
+                }
             }
 
             var artistsDiv = playerEl.querySelector(".Meta_artists__VnR52");
-            if (artistsDiv && data.artists.length) {
+            if (artistsDiv && normalizedArtists.length) {
+                var renderedArtists = readRenderedArtists(artistsDiv);
+                if (!areArtistListsEqual(renderedArtists, normalizedArtists)) {
                 artistsDiv.innerHTML = "";
-                data.artists.forEach(function(artist, i) {
+                normalizedArtists.forEach(function(artist, i) {
                     var a = document.createElement("a");
                     a.className = "buOTZq_TKQOVyjMLrXvB Meta_text__Y5uYH Meta_link__IFDBA";
                     a.setAttribute("aria-label", "Артист " + artist.text);
                     a.dataset.testId = "SEPARATED_ARTIST_TITLE";
                     a.href = artist.href || "#";
+                    bindArtistLink(a, artist);
                     var span = document.createElement("span");
                     span.className = "_MWOVuZRvUQdXKTMcOPx Z_WIr2W8JU4MPQek3hgR _3_Mxw7Si7j2g4kWjlpR Meta_text__Y5uYH Meta_artistCaption__JESZi";
                     span.textContent = artist.text;
                     a.appendChild(span);
                     artistsDiv.appendChild(a);
-                    if (i < data.artists.length - 1) {
+                    if (i < normalizedArtists.length - 1) {
                         artistsDiv.appendChild(document.createTextNode(", "));
                     }
                 });
+                }
+            }
+
+            if (playerEl instanceof HTMLElement) {
+                var playerAccentColor = "";
+                if (derivedColors) {
+                    playerAccentColor = String(
+                        derivedColors.average ||
+                        derivedColors.miniPlayer ||
+                        derivedColors.accent ||
+                        ""
+                    ).trim();
+                }
+                if (nativePlayerBar instanceof HTMLElement && typeof window.getComputedStyle === "function") {
+                    var nativePlayerStyles = window.getComputedStyle(nativePlayerBar);
+                    if (!playerAccentColor) {
+                        playerAccentColor = (nativePlayerStyles.getPropertyValue("--player-average-color-background") || "").trim();
+                    }
+                    if (!playerAccentColor) {
+                        playerAccentColor = nativePlayerStyles.backgroundColor || "";
+                    }
+                }
+                if (!playerAccentColor && typeof window.getComputedStyle === "function") {
+                    playerAccentColor = (window.getComputedStyle(document.documentElement).getPropertyValue("--ym-background-color-primary-enabled-player") || "").trim();
+                }
+                if (playerAccentColor) {
+                    setStylePropertyIfChanged(playerEl, "--player-average-color-background", playerAccentColor);
+                }
             }
 
             var playing = isPlaying();
-            var playBtn = playerEl.querySelector('[data-test-id="PLAY_BUTTON"]');
-            var pauseBtn = playerEl.querySelector('[data-test-id="PAUSE_BUTTON"]');
+            var playPauseBtn = playerEl.querySelector('[data-test-id="PLAY_BUTTON"], [data-test-id="PAUSE_BUTTON"]');
+            var likeBtn = playerEl.querySelector('[data-test-id="LIKE_BUTTON"]');
+            var dislikeBtn = playerEl.querySelector('[data-test-id="DISLIKE_BUTTON"]');
+            var repeatBtn = playerEl.querySelector('[data-test-id^="REPEAT_BUTTON"]');
+
+            if (playPauseBtn) {
+                setDatasetIfChanged(playPauseBtn, "testId", playing ? "PAUSE_BUTTON" : "PLAY_BUTTON");
+                setAttributeIfChanged(playPauseBtn, "aria-label", playing ? "Пауза" : "Воспроизведение");
+                setDatasetIfChanged(playPauseBtn, "state", playing ? "pause" : "play");
+                setUseHref(playPauseBtn, playing ? "pause_filled_l" : "play_filled_l");
+            }
+
+            if (likeBtn) {
+                var liked = isTrackLiked();
+                setPressedState(likeBtn, liked, liked ? "liked" : "idle");
+                setAttributeIfChanged(likeBtn, "aria-label", liked ? "Убрать лайк" : "Нравится");
+                setUseHref(likeBtn, liked ? "liked_xs" : "like_xs");
+            }
+
+            if (dislikeBtn) {
+                var disliked = isTrackDisliked();
+                setPressedState(dislikeBtn, disliked, disliked ? "disliked" : "idle");
+                setAttributeIfChanged(dislikeBtn, "aria-label", disliked ? "Убрать дизлайк" : "Не нравится");
+                setUseHref(dislikeBtn, disliked ? "disliked_xs" : "dislike_xs");
+            }
+
+            if (repeatBtn) {
+                var repeatState = getNativeRepeatState();
+                setDatasetIfChanged(repeatBtn, "state", repeatState);
+                setAttributeIfChanged(repeatBtn, "aria-pressed", repeatState === "off" ? "false" : "true");
+                if (repeatState === "one") {
+                    setDatasetIfChanged(repeatBtn, "testId", "REPEAT_BUTTON_REPEAT_ONE");
+                    setAttributeIfChanged(repeatBtn, "aria-label", "Повтор трека");
+                    setUseHref(repeatBtn, "repeat_one_xs");
+                } else if (repeatState === "all") {
+                    setDatasetIfChanged(repeatBtn, "testId", "REPEAT_BUTTON_REPEAT");
+                    setAttributeIfChanged(repeatBtn, "aria-label", "Повтор плейлиста");
+                    setUseHref(repeatBtn, "repeat_xs");
+                } else {
+                    setDatasetIfChanged(repeatBtn, "testId", "REPEAT_BUTTON_NO_REPEAT");
+                    setAttributeIfChanged(repeatBtn, "aria-label", "Повтор");
+                    setUseHref(repeatBtn, "repeat_xs");
+                }
+            }
+
+            syncTimecode(playerEl);
             if (playing) {
-                if (playBtn) {
-                    playBtn.dataset.testId = "PAUSE_BUTTON";
-                    playBtn.setAttribute("aria-label", "Пауза");
-                    var svg = playBtn.querySelector("use");
-                    if (svg) svg.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", "/icons/sprite.svg#pause_filled_l");
-                }
-            } else {
-                if (pauseBtn) {
-                    pauseBtn.dataset.testId = "PLAY_BUTTON";
-                    pauseBtn.setAttribute("aria-label", "Воспроизведение");
-                    var svg2 = pauseBtn.querySelector("use");
-                    if (svg2) svg2.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", "/icons/sprite.svg#play_filled_l");
-                }
+                scheduleTimecodeSync();
             }
         }, null, "Failed to sync player data");
     }
 
-    function syncVibeAnimation(shouldHide) {
+    function syncVibeAnimation(shouldHide, topPercent) {
         safeRun(function() {
             var nodes = document.querySelectorAll('[data-test-id="' + VIBE_ANIMATION_TEST_ID + '"]');
             for (var i = 0; i < nodes.length; i += 1) {
                 var node = nodes[i];
                 if (!(node instanceof HTMLElement)) continue;
                 node.classList.toggle("ps-vibe-animation-hidden", Boolean(shouldHide));
-                node.style.removeProperty("display");
+                node.style.top = String(topPercent) + "%";
+                node.style.display = shouldHide ? "none" : "";
             }
         }, null, "Failed to sync vibe animation");
     }
@@ -506,7 +1278,11 @@
         if (isMyWaveContext()) {
             if (!isPlaying()) {
                 var playButton = findPlayerPlayButton();
-                if (playButton) return dispatchClick(playButton);
+                if (playButton) {
+                    var resumed = dispatchClick(playButton);
+                    schedulePlayerStateSync();
+                    return resumed;
+                }
             }
             return true;
         }
@@ -521,6 +1297,7 @@
 
         dispatchClick(trigger);
         await sleep(800);
+        schedulePlayerStateSync();
         return isMyWaveContext();
     }
 
@@ -528,7 +1305,11 @@
         if (!isMyWaveContext()) return false;
         if (!isPlaying()) return true;
         var pauseButton = findPlayerPauseButton();
-        return pauseButton ? dispatchClick(pauseButton) : false;
+        var paused = pauseButton ? dispatchClick(pauseButton) : false;
+        if (paused) {
+            schedulePlayerStateSync();
+        }
+        return paused;
     }
 
     async function toggleMyWave() {
@@ -536,10 +1317,18 @@
             if (isPlaying()) return pauseMyWave();
 
             var playButton = findPlayerPlayButton();
-            return playButton ? dispatchClick(playButton) : false;
+            var resumed = playButton ? dispatchClick(playButton) : false;
+            if (resumed) {
+                schedulePlayerStateSync();
+            }
+            return resumed;
         }
 
-        return startMyWave();
+        var started = await startMyWave();
+        if (started) {
+            schedulePlayerStateSync();
+        }
+        return started;
     }
 
     function createPlayButton() {
@@ -629,8 +1418,9 @@
         var section = document.createElement("section");
         section.className = "PlayerBarDesktopWithBackgroundProgressBar_root__bpmwN PlayerBarDesktopWithBackgroundProgressBar_important__HzXrK CommonLayout_playerBar__zXRxq PlayerBar_root__cXUnU";
         section.dataset.testId = "PLAYERBAR_DESKTOP";
+        section.setAttribute(CUSTOM_PLAYER_ATTR, "true");
         section.setAttribute("aria-labelledby", "player-region");
-        section.style.setProperty("--player-average-color-background", "hsl(240, 60%, 20%)");
+        section.style.setProperty("--player-average-color-background", "var(--ym-background-color-primary-enabled-player)");
         
         var playerBarDiv = document.createElement("div");
         playerBarDiv.className = "PlayerBarDesktopWithBackgroundProgressBar_playerBar__mp0p9";
@@ -700,7 +1490,17 @@
         img.dataset.testId = "ENTITY_COVER_IMAGE";
         img.src = "https://avatars.yandex.net/get-music-content/4796762/7669fe96.a.15647955-1/100x100";
         img.srcset = "https://avatars.yandex.net/get-music-content/4796762/7669fe96.a.15647955-1/100x100, https://avatars.yandex.net/get-music-content/4796762/7669fe96.a.15647955-1/200x200 2x";
+        img.setAttribute("role", "button");
+        img.setAttribute("tabindex", "0");
+        img.setAttribute("aria-label", "Плеер на весь экран");
         div.appendChild(img);
+
+        img.addEventListener("click", openNativeFullscreen);
+        img.addEventListener("keydown", function(event) {
+            if (event.key === "Enter" || event.key === " ") {
+                openNativeFullscreen(event);
+            }
+        });
         
         var fullscreenBtn = createFullscreenButton();
         div.appendChild(fullscreenBtn);
@@ -724,6 +1524,9 @@
         span.className = "JjlbHZ4FaP9EAcR_1DxF";
         span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP UwnL5AJBMMAp6NwMDdZk", "fullscreen_xs"));
         button.appendChild(span);
+
+        button.addEventListener("click", openNativeFullscreen);
+
         root.appendChild(button);
         
         return root;
@@ -784,6 +1587,10 @@
         link.setAttribute("aria-label", "Артист Яндекс Музыка");
         link.dataset.testId = "SEPARATED_ARTIST_TITLE";
         link.href = "#";
+        bindArtistLink(link, {
+            text: "Яндекс Музыка",
+            href: "#"
+        });
         
         var span = document.createElement("span");
         span.className = "_MWOVuZRvUQdXKTMcOPx Z_WIr2W8JU4MPQek3hgR _3_Mxw7Si7j2g4kWjlpR Meta_text__Y5uYH Meta_artistCaption__JESZi";
@@ -824,6 +1631,10 @@
         span.className = "JjlbHZ4FaP9EAcR_1DxF";
         span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP UwnL5AJBMMAp6NwMDdZk", "like_xs"));
         button.appendChild(span);
+
+        button.addEventListener("click", function() {
+            toggleLike();
+        });
         
         return button;
     }
@@ -842,6 +1653,10 @@
         span.className = "JjlbHZ4FaP9EAcR_1DxF";
         span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP UwnL5AJBMMAp6NwMDdZk", "dislike_xs"));
         button.appendChild(span);
+
+        button.addEventListener("click", function() {
+            toggleDislike();
+        });
         
         return button;
     }
@@ -907,11 +1722,7 @@
         div.appendChild(button);
         
         button.addEventListener("click", function() {
-            findOriginalMenuButton("repeat_xs", function(originalButton) {
-                if (originalButton) {
-                    dispatchClick(originalButton);
-                }
-            });
+            clickNativeRepeatAction();
         });
         
         return div;
@@ -919,20 +1730,13 @@
 
     function ensureVibeMenuOpen() {
         safeRun(function() {
-            var menu = document.querySelector('.VibeContextMenu_root__872YP');
-            if (!menu) {
-                var menuTrigger = document.querySelector('button[aria-label="Контекстное меню"][aria-haspopup="dialog"]');
-                if (menuTrigger && menuTrigger.getAttribute('aria-expanded') !== 'true') {
-                    dispatchClick(menuTrigger);
-                }
-            }
+            ensureVibeMenuBackend();
         }, null, "Failed to ensure vibe menu open");
     }
 
     function findOriginalMenuButton(iconId, callback) {
         return safeRun(function() {
-            var menu = document.querySelector('.VibeContextMenu_root__872YP');
-            var button = menu ? clickMenuButton(menu, iconId) : null;
+            var button = findNativeMenuAction(iconId);
             if (button && callback) callback(button);
             return button;
         }, null, "Failed to find original menu button");
@@ -982,6 +1786,11 @@
         span.className = "JjlbHZ4FaP9EAcR_1DxF";
         span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP l3tE1hAMmBj2aoPPwU08", "previous_xxs"));
         button.appendChild(span);
+
+        button.addEventListener("click", function() {
+            callPlayerApi("previous");
+            schedulePlayerStateSync([0, 180, 420, 800]);
+        });
         
         return button;
     }
@@ -1000,6 +1809,11 @@
         span.className = "JjlbHZ4FaP9EAcR_1DxF";
         span.appendChild(createSvg("J9wTKytjOWG73QMoN5WP l3tE1hAMmBj2aoPPwU08", "next_xxs"));
         button.appendChild(span);
+
+        button.addEventListener("click", function() {
+            callPlayerApi("next");
+            schedulePlayerStateSync([0, 180, 420, 800]);
+        });
         
         return button;
     }
@@ -1019,9 +1833,13 @@
         button.appendChild(span);
         
         button.addEventListener("click", function() {
-            toggleMyWave().catch(function(error) {
-                logError("Failed to toggle playback", error);
-            });
+            if (!callPlayerApi("togglePlayPause")) {
+                toggleMyWave().catch(function(error) {
+                    logError("Failed to toggle playback", error);
+                });
+                return;
+            }
+            schedulePlayerStateSync();
         });
         
         return button;
@@ -1062,11 +1880,7 @@
         button.appendChild(span);
         
         button.addEventListener("click", function() {
-            findOriginalMenuButton("syncLyrics_xs", function(originalButton) {
-                if (originalButton) {
-                    dispatchClick(originalButton);
-                }
-            });
+            clickNativeMenuAction("syncLyrics_xs");
         });
         
         return button;
@@ -1087,11 +1901,7 @@
         button.appendChild(span);
         
         button.addEventListener("click", function() {
-            findOriginalMenuButton("playQueue_xs", function(originalButton) {
-                if (originalButton) {
-                    dispatchClick(originalButton);
-                }
-            });
+            clickNativeMenuAction("playQueue_xs");
         });
         
         return button;
@@ -1116,11 +1926,7 @@
         wrapper.appendChild(button);
         
         button.addEventListener("click", function() {
-            findOriginalMenuButton("settings_xs", function(originalButton) {
-                if (originalButton) {
-                    dispatchClick(originalButton);
-                }
-            });
+            clickNativeMenuAction("settings_xs");
         });
         
         return wrapper;
@@ -1129,8 +1935,11 @@
     function createVolumeControl() {
         var originalVolume = document.querySelector('.ChangeVolume_root__HDxtA.VibePlayerBar_changeVolume__x7FHC');
         if (originalVolume) {
-            originalVolume.classList.remove('VibePlayerBar_changeVolume__x7FHC');
-            return originalVolume;
+            var clone = originalVolume.cloneNode(true);
+            if (clone instanceof HTMLElement) {
+                clone.removeAttribute("id");
+                return clone;
+            }
         }
         
         var div = document.createElement("div");
@@ -1276,6 +2085,15 @@
         img.loading = "eager";
         img.dataset.testId = "ENTITY_COVER_IMAGE";
         img.src = "https://avatars.yandex.net/get-music-content/4796762/7669fe96.a.15647955-1/100x100";
+        img.setAttribute("role", "button");
+        img.setAttribute("tabindex", "0");
+        img.setAttribute("aria-label", "Плеер на весь экран");
+        img.addEventListener("click", openNativeFullscreen);
+        img.addEventListener("keydown", function(event) {
+            if (event.key === "Enter" || event.key === " ") {
+                openNativeFullscreen(event);
+            }
+        });
         container.appendChild(img);
         
         return container;
@@ -1302,8 +2120,9 @@
         var section = document.createElement("section");
         section.className = "PlayerBarDesktopWithBackgroundProgressBar_root__bpmwN PlayerBarDesktopWithBackgroundProgressBar_important__HzXrK CommonLayout_playerBar__zXRxq PlayerBar_root__cXUnU";
         section.dataset.testId = "PLAYERBAR_DESKTOP";
+        section.setAttribute(CUSTOM_PLAYER_ATTR, "true");
         section.setAttribute("aria-labelledby", "player-region");
-        section.style.setProperty("--player-average-color-background", "hsl(240, 60%, 20%)");
+        section.style.setProperty("--player-average-color-background", "var(--ym-background-color-primary-enabled-player)");
         
         var playerBarDiv = document.createElement("div");
         playerBarDiv.className = "PlayerBarDesktopWithBackgroundProgressBar_playerBar__mp0p9";
@@ -1361,17 +2180,24 @@
             var triggerExists = !!findMyWaveTrigger();
 
             if (playButton instanceof HTMLButtonElement) {
-                playButton.dataset.state = inMyWave ? (playing ? "pause" : "resume") : "start";
-                playButton.setAttribute(
+                setDatasetIfChanged(playButton, "state", inMyWave ? (playing ? "pause" : "resume") : "start");
+                setAttributeIfChanged(
+                    playButton,
                     "aria-label",
                     inMyWave
                         ? (playing ? "Пауза Моей волны" : "Продолжить Мою волну")
                         : "Запустить Мою волну"
                 );
-                playButton.title = inMyWave
+                var nextTitle = inMyWave
                     ? (playing ? "Пауза текущей Моей волны" : "Продолжить текущую Мою волну")
                     : "Открыть волну и запустить её";
-                playButton.disabled = !inMyWave && !findMyWaveNavButton() && !triggerExists;
+                if (playButton.title !== nextTitle) {
+                    playButton.title = nextTitle;
+                }
+                var nextDisabled = !inMyWave && !findMyWaveNavButton() && !triggerExists;
+                if (playButton.disabled !== nextDisabled) {
+                    playButton.disabled = nextDisabled;
+                }
 
                 var playGlyph = playButton.querySelector('[data-icon-role="play"]');
                 var pauseGlyph = playButton.querySelector('[data-icon-role="pause"]');
@@ -1390,15 +2216,17 @@
             }
 
             if (statusNode instanceof HTMLElement) {
+                var nextStatus = "";
                 if (inMyWave) {
-                    statusNode.textContent = playing ? "Контекст: Моя волна, сейчас играет" : "Контекст: Моя волна, сейчас на паузе";
+                    nextStatus = playing ? "Контекст: Моя волна, сейчас играет" : "Контекст: Моя волна, сейчас на паузе";
                 } else if (triggerExists) {
-                    statusNode.textContent = "Контекст: не волна, trigger найден";
+                    nextStatus = "Контекст: не волна, trigger найден";
                 } else if (findMyWaveNavButton()) {
-                    statusNode.textContent = "Контекст: не волна, trigger ещё не появился";
+                    nextStatus = "Контекст: не волна, trigger ещё не появился";
                 } else {
-                    statusNode.textContent = "Контекст: не волна, элементы управления не найдены";
+                    nextStatus = "Контекст: не волна, элементы управления не найдены";
                 }
+                setTextIfChanged(statusNode, nextStatus);
             }
         }, null, "Failed to sync UI");
     }
@@ -1406,7 +2234,7 @@
     function render(options) {
         safeRun(function() {
             cleanupVibeMeta();
-            syncVibeAnimation(options.hideVibeAnimation);
+            syncVibeAnimation(options.hideVibeAnimation, options.vibeAnimationTop);
 
             var host = findMainPage();
             if (!host) return;
@@ -1426,20 +2254,19 @@
 
     function ensurePlayerBar(host, shouldShow) {
         safeRun(function() {
-            var existingPlayer = document.querySelector('[data-test-id="PLAYERBAR_DESKTOP"]');
-            var inVibeContext = isMyWaveContext();
+            var existingPlayer = findCustomPlayerBar();
             var canShowInHost = host instanceof HTMLElement;
             
-            if (inVibeContext && shouldShow && canShowInHost && !existingPlayer) {
+            if (shouldShow && canShowInHost && !existingPlayer) {
                 var player = createHomePlayer();
                 host.appendChild(player);
                 syncPlayerData(player);
-            } else if (existingPlayer && inVibeContext && shouldShow && canShowInHost) {
+            } else if (existingPlayer && shouldShow && canShowInHost) {
                 if (existingPlayer.parentElement !== host) {
                     host.appendChild(existingPlayer);
                 }
                 syncPlayerData(existingPlayer);
-            } else if (existingPlayer && (!inVibeContext || !shouldShow || !canShowInHost)) {
+            } else if (existingPlayer && (!shouldShow || !canShowInHost)) {
                 existingPlayer.remove();
             }
         }, null, "Failed to ensure player bar");
@@ -1448,37 +2275,120 @@
     function mount() {
         if (typeof document === "undefined" || typeof window === "undefined") return;
 
-        var settingsStore = getAddonSettings(addonConfig.name);
+        var settingsStore = getAddonSettingsStore();
         var settings = settingsStore.getCurrent();
         var updateScheduled = false;
-        var observer = new MutationObserver(function() {
+        var bodyObserver = null;
+        var pageObserver = null;
+        var observedPage = null;
+
+        function scheduleUpdate() {
             if (updateScheduled) return;
             updateScheduled = true;
             requestAnimationFrame(function() {
                 updateScheduled = false;
                 update();
             });
-        });
+        }
+
+        function disconnectPageObserver() {
+            if (pageObserver) {
+                pageObserver.disconnect();
+                pageObserver = null;
+            }
+            observedPage = null;
+        }
+
+        function isOwnedNode(node) {
+            if (!(node instanceof Element)) return false;
+            if (node.id === ROOT_ID || node.closest("#" + ROOT_ID)) return true;
+            var player = findCustomPlayerBar();
+            return !!(player && (node === player || player.contains(node)));
+        }
+
+        function isOwnedMutation(record) {
+            if (isOwnedNode(record.target)) return true;
+
+            var nodes = [];
+            for (var i = 0; i < record.addedNodes.length; i += 1) {
+                nodes.push(record.addedNodes[i]);
+            }
+            for (var j = 0; j < record.removedNodes.length; j += 1) {
+                nodes.push(record.removedNodes[j]);
+            }
+
+            if (!nodes.length) return false;
+            for (var k = 0; k < nodes.length; k += 1) {
+                if (!isOwnedNode(nodes[k])) return false;
+            }
+            return true;
+        }
+
+        function ensurePageObserver() {
+            safeRun(function() {
+                var page = findMainPage();
+                if (!(page instanceof HTMLElement)) {
+                    disconnectPageObserver();
+                    return false;
+                }
+
+                if (observedPage === page && pageObserver) {
+                    return true;
+                }
+
+                disconnectPageObserver();
+                observedPage = page;
+                pageObserver = new MutationObserver(function(records) {
+                    for (var i = 0; i < records.length; i += 1) {
+                        if (!isOwnedMutation(records[i])) {
+                            scheduleUpdate();
+                            return;
+                        }
+                    }
+                });
+                pageObserver.observe(page, {
+                    attributes: true,
+                    attributeFilter: ["aria-label", "aria-pressed", "class", "data-test-id", "src", "srcset"],
+                    childList: true,
+                    subtree: true
+                });
+                return true;
+            }, false, "Failed to ensure page observer");
+        }
+
+        function ensureBodyObserver() {
+            safeRun(function() {
+                if (bodyObserver || !document.body) return;
+                bodyObserver = new MutationObserver(function() {
+                    var previousPage = observedPage;
+                    var hasPageObserver = ensurePageObserver();
+                    if (hasPageObserver && observedPage !== previousPage) {
+                        scheduleUpdate();
+                    }
+                });
+                bodyObserver.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            }, null, "Failed to ensure body observer");
+        }
 
         function update() {
             safeRun(function() {
+                ensurePageObserver();
                 render({
                     visible: readBooleanSetting(settings, "enabled", true),
-                    hideVibeAnimation: readBooleanSetting(settings, "hideVibeAnimation", true)
+                    hideVibeAnimation: readBooleanSetting(settings, "hideVibeAnimation", false),
+                    vibeAnimationTop: readNumberSetting(settings, "vibeAnimationTop", -70)
                 });
             }, null, "Update failed");
         }
 
         function start() {
             safeRun(function() {
+                ensureBodyObserver();
+                ensurePageObserver();
                 update();
-                if (document.body) {
-                    observer.observe(document.body, {
-                        childList: true,
-                        subtree: true
-                    });
-                }
-                setInterval(update, UI_REFRESH_INTERVAL_MS);
             }, null, "Start failed");
         }
 
@@ -1490,10 +2400,11 @@
 
         safeRun(function() {
             settingsStore.onChange(function(nextSettings) {
-                settings = nextSettings;
+                settings = nextSettings || {};
                 update();
             });
         }, null, "Failed to subscribe to settings");
+
     }
 
     mount();

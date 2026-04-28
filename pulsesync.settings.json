@@ -1,4 +1,5 @@
 {
     "enabled": true,
-    "hideVibeAnimation": false
+    "hideVibeAnimation": false,
+    "vibeAnimationTop": -70
 }

@@ -18,6 +18,16 @@
                     "type": "button",
                     "bool": false,
                     "defaultParameter": false
+                },
+                {
+                    "id": "vibeAnimationTop",
+                    "name": "Vibe animation top",
+                    "description": "Вертикальная позиция блока VIBE_ANIMATION в процентах.",
+                    "type": "slider",
+                    "min": -150,
+                    "max": 0,
+                    "step": 1,
+                    "defaultParameter": -70
                 }
             ]
         }
