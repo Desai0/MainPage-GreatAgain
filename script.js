@@ -1,6 +1,3 @@
-/* Прошу не использовать данные наработки в своих аддонах, если хотите новую функцию или добавить поддержку к вашей теме - свяжитесь со мной на ветке в дискорде */
-
-
 (function() {
     var addonConfig = {
         name: "YM Old Home UI",
@@ -24,6 +21,9 @@
     var pendingLayoutResyncTimer = 0;
     var pendingPlayerStateSyncTimers = [];
     var pendingTimecodeSyncTimer = 0;
+    var lastObservedTrackSignature = "";
+    var lastObservedProgressPosition = -1;
+    var lastObservedProgressDuration = -1;
     var vibeMenuState = {
         menu: null,
         trigger: null,
@@ -440,7 +440,7 @@
 
             for (var i = 0; i < links.length; i += 1) {
                 var link = links[i];
-                if (!(link instanceof HTMLAnchorElement)) continue;
+                if (!(link instanceof HTMLElement)) continue;
                 if (customPlayer && customPlayer.contains(link)) continue;
                 if (link.closest('[data-test-id="FULLSCREEN_PLAYER_MODAL"]')) continue;
                 if (link.closest('[data-test-id="PLAY_QUEUE"]')) continue;
@@ -477,6 +477,11 @@
                     event.preventDefault();
                     event.stopPropagation();
                     dispatchClick(nativeLink);
+                    return;
+                }
+                if ((anchor.getAttribute("href") || "#") === "#") {
+                    event.preventDefault();
+                    event.stopPropagation();
                 }
             });
         }, null, "Failed to bind artist link");
@@ -790,6 +795,12 @@
         }, false, "Failed to read dislike state");
     }
 
+    function hasNativeLyricsAction() {
+        return safeRun(function() {
+            return !!findNativeMenuAction("syncLyrics_xs");
+        }, false, "Failed to read lyrics action state");
+    }
+
     function getTrackDerivedColors() {
         return safeRun(function() {
             var api = getPulseSyncApi();
@@ -798,6 +809,29 @@
             if (!track || typeof track !== "object") return null;
             return track.derivedColors && typeof track.derivedColors === "object" ? track.derivedColors : null;
         }, null, "Failed to read track derived colors");
+    }
+
+    function getCurrentTrackSignature() {
+        return safeRun(function() {
+            var api = getPulseSyncApi();
+            if (!api || typeof api.getCurrentTrack !== "function") return "";
+            var track = api.getCurrentTrack();
+            if (!track || typeof track !== "object") return "";
+
+            var firstArtist = "";
+            if (Array.isArray(track.artists) && track.artists.length) {
+                var artist = track.artists[0];
+                firstArtist = String(artist?.name || artist?.title || artist?.text || "").trim();
+            }
+
+            return [
+                String(track.id || ""),
+                String(track.realId || ""),
+                String(track.title || ""),
+                String(track.durationMs || ""),
+                firstArtist
+            ].join("|");
+        }, "", "Failed to build track signature");
     }
 
     function toggleLike() {
@@ -879,6 +913,23 @@
         }, null, "Failed to set pressed state");
     }
 
+    function syncLyricsButtonState(button) {
+        safeRun(function() {
+            if (!(button instanceof HTMLButtonElement)) return;
+            var hasLyrics = hasNativeLyricsAction();
+            button.disabled = !hasLyrics;
+            setAttributeIfChanged(button, "aria-disabled", hasLyrics ? "false" : "true");
+            setDatasetIfChanged(button, "state", hasLyrics ? "enabled" : "disabled");
+            setAttributeIfChanged(
+                button,
+                "aria-label",
+                hasLyrics
+                    ? "Включить текстомузыку Может нарушить доступность"
+                    : "Текстомузыка недоступна для этого трека"
+            );
+        }, null, "Failed to sync lyrics button state");
+    }
+
     function findCustomPlayerBar() {
         return safeRun(function() {
             var host = findMainPage();
@@ -915,6 +966,44 @@
                 }, queue[i]));
             }
         }, null, "Failed to schedule player state sync");
+    }
+
+    function shouldResyncForTrackAdvance(progress) {
+        return safeRun(function() {
+            var signature = getCurrentTrackSignature();
+            var position = Number(progress && progress.position);
+            var duration = Number(progress && progress.duration);
+            var hasPosition = Number.isFinite(position);
+            var hasDuration = Number.isFinite(duration);
+
+            var trackChanged = !!(
+                signature &&
+                lastObservedTrackSignature &&
+                signature !== lastObservedTrackSignature
+            );
+
+            var jumpedBackToStart = !!(
+                hasPosition &&
+                lastObservedProgressPosition >= 3 &&
+                position <= 1.5 &&
+                (
+                    (hasDuration && lastObservedProgressDuration > 0 && Math.abs(duration - lastObservedProgressDuration) > 1) ||
+                    position + 2 < lastObservedProgressPosition
+                )
+            );
+
+            if (signature) {
+                lastObservedTrackSignature = signature;
+            }
+            if (hasPosition) {
+                lastObservedProgressPosition = position;
+            }
+            if (hasDuration) {
+                lastObservedProgressDuration = duration;
+            }
+
+            return trackChanged || jumpedBackToStart;
+        }, false, "Failed to detect track advance");
     }
 
     function getPlayerProgress() {
@@ -993,6 +1082,10 @@
                 pendingTimecodeSyncTimer = 0;
                 var player = findCustomPlayerBar();
                 if (!player) return;
+                var progress = getPlayerProgress();
+                if (shouldResyncForTrackAdvance(progress)) {
+                    schedulePlayerStateSync([0, 120, 280, 600]);
+                }
                 syncTimecode(player);
                 if (isPlaying()) {
                     scheduleTimecodeSync();
@@ -1208,6 +1301,7 @@
             var likeBtn = playerEl.querySelector('[data-test-id="LIKE_BUTTON"]');
             var dislikeBtn = playerEl.querySelector('[data-test-id="DISLIKE_BUTTON"]');
             var repeatBtn = playerEl.querySelector('[data-test-id^="REPEAT_BUTTON"]');
+            var lyricsBtn = playerEl.querySelector('[data-test-id="PLAYERBAR_DESKTOP_SYNC_LYRICS_BUTTON"]');
 
             if (playPauseBtn) {
                 setDatasetIfChanged(playPauseBtn, "testId", playing ? "PAUSE_BUTTON" : "PLAY_BUTTON");
@@ -1247,6 +1341,10 @@
                     setAttributeIfChanged(repeatBtn, "aria-label", "Повтор");
                     setUseHref(repeatBtn, "repeat_xs");
                 }
+            }
+
+            if (lyricsBtn instanceof HTMLButtonElement) {
+                syncLyricsButtonState(lyricsBtn);
             }
 
             syncTimecode(playerEl);
@@ -1883,8 +1981,11 @@
         button.appendChild(span);
         
         button.addEventListener("click", function() {
+            if (button.disabled) return;
             clickNativeMenuAction("syncLyrics_xs");
         });
+
+        syncLyricsButtonState(button);
         
         return button;
     }
@@ -1937,12 +2038,8 @@
 
     function createVolumeControl() {
         var originalVolume = document.querySelector('.ChangeVolume_root__HDxtA.VibePlayerBar_changeVolume__x7FHC');
-        if (originalVolume) {
-            var clone = originalVolume.cloneNode(true);
-            if (clone instanceof HTMLElement) {
-                clone.removeAttribute("id");
-                return clone;
-            }
+        if (originalVolume instanceof HTMLElement) {
+            return originalVolume;
         }
         
         var div = document.createElement("div");

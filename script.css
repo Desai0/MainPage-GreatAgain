@@ -4,8 +4,22 @@
     position: relative;
 }
 
-[class*="VibePage_meta__kWwRE"], .MainPage_actionsContainer__t90JB {
+[class*="MainPage_actionsContainer__"], [class*="VibePage_entityMeta__"], [class*="VibePage_playerBlock__"] {
     display: none !important;
+}
+
+.VibeResetButton_root__ju8pE.VibePage_context__CoYut.VibeResetButton_root_visible__OHA1w {
+    position: relative;
+    top: 30%;
+    transform: translateX(-16dvw);
+    transition:
+        transform 0.16s ease-out,
+        opacity 0.18s ease-out;
+    will-change: transform, opacity;
+}
+
+.ps-swiper-layout-shifted .VibeResetButton_root__ju8pE.VibePage_context__CoYut.VibeResetButton_root_visible__OHA1w {
+    transform: translateX(-0.2dvw) !important;
 }
 
 .swiper {
@@ -33,7 +47,7 @@
 }
 
 [data-test-id="VIBE_ANIMATION"].ps-swiper-layout-shifted {
-    transform: translateX(20.8dvw) !important;
+    transform: translateX(21.2dvw) !important;
     margin-left: 0 !important;
 }
 
@@ -226,40 +240,21 @@
     overflow: visible !important;
 }
 
-[data-ps-custom-player="true"] .ChangeTimecodeBackground_root__B89FS {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.1);
-    cursor: pointer;
-}
-
-[data-ps-custom-player="true"] .ChangeTimecodeBackground_backgroundProgressbar__hT_QP {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 0;
-    width: var(--buffered-width, 0%);
-    height: 100%;
-    background: rgba(255, 255, 255, 0.22);
-    pointer-events: none;
+[data-ps-custom-player="true"] .ChangeTimecodeBackground_progressbar__M93Ie::before, .PlayerBarDesktopWithBackgroundProgressBar_progressBar___Q6eK::before {
+    opacity: 0;
 }
 
 [data-ps-custom-player="true"] .ChangeTimecodeBackground_progressbar__M93Ie {
-    position: absolute;
     top: 0;
     left: 0;
     z-index: 1;
-    height: 100%;
-    background: var(--ym-slider-color-primary-enabled);
+    height: 5%;
+    background: #ffffff;
     width: var(--track-progress, 0%);
 }
 
 [data-ps-custom-player="true"] .ChangeTimecodeBackground_thumb__vx6J0 {
-    position: absolute;
-    top: 50%;
+    top: 2%;
     left: var(--thumb-position, 0px);
     z-index: 2;
     width: 12px;
@@ -269,16 +264,7 @@
     transform: translate(-50%, -50%);
 }
 
-[data-ps-custom-player="true"] .ChangeTimecodeBackground_slider__Jdu3l {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 3;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-}
+
 
 [data-ps-custom-player="true"] .Timecode_root__TLT75 {
     position: absolute;
@@ -331,7 +317,6 @@
     border-radius: 8px;
     object-fit: cover;
     aspect-ratio: 1/1 !important;
-    cursor: pointer;
     transition: filter 0.18s ease, opacity 0.18s ease;
 }
 
@@ -430,9 +415,27 @@
 [data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="LIKE_BUTTON"],
 [data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="DISLIKE_BUTTON"],
 [data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id^="REPEAT_BUTTON"],
+[data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="PLAYERBAR_DESKTOP_SYNC_LYRICS_BUTTON"],
 [data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="PLAY_BUTTON"],
 [data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="PAUSE_BUTTON"] {
     color: rgba(255, 255, 255, 0.72);
+    transition: filter 0.18s ease, opacity 0.18s ease;
+}
+
+[data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="PLAYERBAR_DESKTOP_SYNC_LYRICS_BUTTON"][data-state="enabled"] {
+    color: var(--ym-controls-color-primary-text-enabled, #ffffff);
+    opacity: 1;
+    cursor: pointer;
+    transition: filter 0.3s ease-in-out,
+        color 0.7s ease,
+        transform 0.3s ease-in-out;
+}
+
+[data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="PLAYERBAR_DESKTOP_SYNC_LYRICS_BUTTON"][data-state="disabled"] {
+    color: rgba(255, 255, 255, 0.34);
+    opacity: 1;
+    cursor: default;
+    pointer-events: none;
 }
 
 [data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="REPEAT_BUTTON_REPEAT"][data-state="all"] {
@@ -536,6 +539,12 @@
     pointer-events: none !important;
 }
 
+div:has(> .dJZf0Flxzx7PR15g7zqM[class*="ArtistsMenu_root__"]) {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
 /* [data-test-id="NAVBAR"] {
     height: calc(100% - 53px);
 } */
@@ -546,4 +555,27 @@
 
 [data-test-id="QUALITY_SETTINGS_CONTEXT_MENU"] {
     height: calc(100% - 13px);
+}
+
+.J9wTKytjOWG73QMoN5WP:hover, [data-test-id="DISLIKE_BUTTON"]:hover {
+    color: var(--accent-color, #ffffff);
+    transition: filter 0.3s ease-in-out,
+        color 0.7s ease,
+        transform 0.3s ease-in-out;
+}
+
+.dJZf0Flxzx7PR15g7zqM.ArtistsMenu_root__j5U2g {
+    position: relative;
+    transform: translate(300px, 550px);
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.ArtistsMenu_menuList__4v6Uo {
+    position: relative;
+    transform: translate(300px, 550px);
+    background: #1a1a1a !important;
 }
