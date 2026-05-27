@@ -164,9 +164,9 @@
             root.classList.toggle("ps-settings-open");
         }
         document.body.classList.toggle("ps-settings-open");
-        var swiper = document.querySelector(".swiper");
-        if (swiper) {
-            swiper.classList.toggle("ps-swiper-hidden-right");
+        var VibePage_wheel__E_p8_ = document.querySelector(".VibePage_wheel__E_p8_");
+        if (VibePage_wheel__E_p8_) {
+            VibePage_wheel__E_p8_.classList.toggle("ps-VibePage_wheel__E_p8_-hidden-right");
         }
     }
 
