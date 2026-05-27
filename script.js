@@ -15,6 +15,11 @@
         return {
             enabled: val("enabled", true),
             hideVibeAnimation: val("hideVibeAnimation", false),
+            canvasBlur: val("canvasBlur", 0),
+            canvasSaturate: val("canvasSaturate", 1),
+            canvasContrast: val("canvasContrast", 1),
+            canvasBrightness: val("canvasBrightness", 1),
+            canvasScale: val("canvasScale", 1),
             onChange: store ? store.onChange.bind(store) : function () { }
         };
     }
@@ -28,10 +33,10 @@
     }
 
     function isPlaying() {
-        if (typeof window.pulsesyncApi?.isPlaying === "function") {
+        if (window.pulsesyncApi && typeof window.pulsesyncApi.isPlaying === "function") {
             return !!window.pulsesyncApi.isPlaying();
         }
-        return !!document.querySelector('[data-test-id="PAUSE_BUTTON"]');
+        return false;
     }
 
     function syncAttr(el, name, val) {
@@ -105,6 +110,29 @@
         var nodes = document.querySelectorAll('[data-test-id="VIBE_ANIMATION"]');
         for (var i = 0; i < nodes.length; i++) {
             nodes[i].style.display = shouldHide ? "none" : "";
+        }
+    }
+
+    function syncCanvasFilter(settings) {
+        var canvases = document.querySelectorAll(".VibeWidgetAnimation_root__7fpeP canvas");
+        var isDefaultFilter = (
+            settings.canvasBlur === 0 &&
+            settings.canvasSaturate === 1 &&
+            settings.canvasContrast === 1 &&
+            settings.canvasBrightness === 1
+        );
+        var filter = isDefaultFilter
+            ? null
+            : "blur(" + settings.canvasBlur + "px) saturate(" + settings.canvasSaturate + ") contrast(" + settings.canvasContrast + ") brightness(" + settings.canvasBrightness + ")";
+        var transform = "scale(" + settings.canvasScale + ")";
+        for (var i = 0; i < canvases.length; i++) {
+            if (filter) {
+                canvases[i].style.setProperty("filter", filter, "important");
+            } else {
+                canvases[i].style.removeProperty("filter");
+            }
+            canvases[i].style.setProperty("transform", transform, "important");
+            canvases[i].style.transformOrigin = "center center";
         }
     }
 
@@ -248,6 +276,7 @@
         function update() {
             var settings = getSettings();
             syncVibeAnimation(settings.hideVibeAnimation);
+            syncCanvasFilter(settings);
 
             var host = document.querySelector('[data-test-id="MAIN_PAGE"]');
             if (!host) return;
@@ -283,6 +312,7 @@
 
         update();
         store.onChange(update);
+        setInterval(update, 250);
     }
 
     mount();

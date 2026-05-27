@@ -1,5 +1,9 @@
 {
     "enabled": true,
     "hideVibeAnimation": false,
-    "vibeAnimationTop": -70
+    "canvasBlur": 0,
+    "canvasSaturate": 1,
+    "canvasContrast": 1,
+    "canvasBrightness": 1,
+    "canvasScale": 1.2
 }

@@ -35,9 +35,7 @@
 }
 
 .VibeWidgetAnimation_root__7fpeP canvas {
-    transform: scale(1) !important;
     transform-origin: center center;
-    filter: blur(5px) invert(75%) grayscale(0%) saturate(1) contrast(2) brightness(1) hue-rotate(0deg) drop-shadow(3px 3px red) drop-shadow(-3px -3px blue) !important;
 }
 
 #ps-vibe-controls.ps-vibe-controls {
@@ -52,14 +50,14 @@
     max-width: calc(100% - 24px);
     margin: 0;
     padding: 18px 20px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    /* border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 24px;
     background:
         linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
         radial-gradient(circle at top left, rgba(123, 255, 196, 0.12), transparent 52%),
         rgba(12, 14, 18, 0.425);
     backdrop-filter: blur(18px);
-    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24); */
     pointer-events: auto;
     transform: translate(-50%, -50%);
     transition: left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
