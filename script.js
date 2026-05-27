@@ -89,6 +89,18 @@
         }
     }
 
+    function toggleSettings() {
+        var root = document.getElementById(ROOT_ID);
+        if (root) {
+            root.classList.toggle("ps-settings-open");
+        }
+        document.body.classList.toggle("ps-settings-open");
+        var swiper = document.querySelector(".swiper");
+        if (swiper) {
+            swiper.classList.toggle("ps-swiper-hidden-right");
+        }
+    }
+
     function syncVibeAnimation(shouldHide) {
         var nodes = document.querySelectorAll('[data-test-id="VIBE_ANIMATION"]');
         for (var i = 0; i < nodes.length; i++) {
@@ -161,7 +173,7 @@
         button.addEventListener("click", function (event) {
             event.preventDefault();
             event.stopPropagation();
-            toggleSwiperBlock();
+            toggleSettings();
         });
 
         return button;
