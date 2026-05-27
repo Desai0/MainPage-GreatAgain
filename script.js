@@ -39,6 +39,70 @@
         return false;
     }
 
+    var isWarningClosed = false;
+
+    function createWarningOverlay() {
+        var overlay = document.createElement("div");
+        overlay.id = "ps-playerbar-warning";
+        overlay.className = "ps-warning-overlay";
+
+        var card = document.createElement("div");
+        card.className = "ps-warning-card";
+
+        var icon = document.createElement("div");
+        icon.className = "ps-warning-icon";
+        icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+
+        var title = document.createElement("h2");
+        title.className = "ps-warning-title";
+        title.textContent = "Настройка интерфейса";
+
+        var desc = document.createElement("p");
+        desc.className = "ps-warning-desc";
+        desc.innerHTML = 'Для корректной работы аддона включите старую панель плеера:<br><br><strong>Настройки → Панель Плеера → Старая панель в новой Волне</strong>';
+
+        var closeBtn = document.createElement("button");
+        closeBtn.className = "ps-warning-btn";
+        closeBtn.textContent = "Понятно";
+        closeBtn.addEventListener("click", function () {
+            isWarningClosed = true;
+            overlay.classList.add("ps-warning-fadeout");
+            setTimeout(function () {
+                overlay.remove();
+            }, 300);
+        });
+
+        card.appendChild(icon);
+        card.appendChild(title);
+        card.appendChild(desc);
+        card.appendChild(closeBtn);
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+    }
+
+    var isPlayerBarVerified = false;
+
+    function checkPlayerBar() {
+        if (isWarningClosed || isPlayerBarVerified) return;
+
+        var layout = document.querySelector('.CommonLayout_root__WC_W1') || document.querySelector('[class*="CommonLayout_root__"]');
+        if (!layout) return;
+
+        var playerBar = layout.querySelector('[data-test-id="PLAYERBAR_DESKTOP"]');
+        var warningEl = document.getElementById("ps-playerbar-warning");
+
+        if (!playerBar) {
+            if (!warningEl) {
+                createWarningOverlay();
+            }
+        } else {
+            isPlayerBarVerified = true;
+            if (warningEl) {
+                warningEl.remove();
+            }
+        }
+    }
+
     function syncAttr(el, name, val) {
         if (el && el.getAttribute(name) !== String(val)) {
             el.setAttribute(name, val);
@@ -273,10 +337,21 @@
 
         var store = getSettings();
 
+        var lastState = {
+            enabled: null,
+            hideVibeAnimation: null,
+            canvasBlur: null,
+            canvasSaturate: null,
+            canvasContrast: null,
+            canvasBrightness: null,
+            canvasScale: null,
+            active: null,
+            playing: null
+        };
+
         function update() {
             var settings = getSettings();
-            syncVibeAnimation(settings.hideVibeAnimation);
-            syncCanvasFilter(settings);
+            checkPlayerBar();
 
             var host = document.querySelector('[data-test-id="MAIN_PAGE"]');
             if (!host) return;
@@ -285,6 +360,36 @@
             if (vibe && vibe.parentElement !== host) {
                 host.insertBefore(vibe, host.firstChild);
             }
+
+            var active = isMyWave();
+            var playing = isPlaying();
+
+            if (
+                lastState.enabled === settings.enabled &&
+                lastState.hideVibeAnimation === settings.hideVibeAnimation &&
+                lastState.canvasBlur === settings.canvasBlur &&
+                lastState.canvasSaturate === settings.canvasSaturate &&
+                lastState.canvasContrast === settings.canvasContrast &&
+                lastState.canvasBrightness === settings.canvasBrightness &&
+                lastState.canvasScale === settings.canvasScale &&
+                lastState.active === active &&
+                lastState.playing === playing
+            ) {
+                return;
+            }
+
+            lastState.enabled = settings.enabled;
+            lastState.hideVibeAnimation = settings.hideVibeAnimation;
+            lastState.canvasBlur = settings.canvasBlur;
+            lastState.canvasSaturate = settings.canvasSaturate;
+            lastState.canvasContrast = settings.canvasContrast;
+            lastState.canvasBrightness = settings.canvasBrightness;
+            lastState.canvasScale = settings.canvasScale;
+            lastState.active = active;
+            lastState.playing = playing;
+
+            syncVibeAnimation(settings.hideVibeAnimation);
+            syncCanvasFilter(settings);
 
             var root = ensureRoot(host);
             root.hidden = !settings.enabled;
