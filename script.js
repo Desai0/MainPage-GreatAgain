@@ -252,6 +252,11 @@
             var host = document.querySelector('[data-test-id="MAIN_PAGE"]');
             if (!host) return;
 
+            var vibe = document.querySelector('[data-test-id="VIBE_ANIMATION"]');
+            if (vibe && vibe.parentElement !== host) {
+                host.insertBefore(vibe, host.firstChild);
+            }
+
             var root = ensureRoot(host);
             root.hidden = !settings.enabled;
 
