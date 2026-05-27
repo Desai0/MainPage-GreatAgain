@@ -1,71 +1,20 @@
 /* Прошу не использовать данные наработки в своих аддонах, если хотите новую функцию или добавить поддержку к вашей теме - свяжитесь со мной на ветке в дискорде */
 
-[data-test-id="MAIN_PAGE"] {
-    position: relative;
-}
-
-[class*="MainPage_actionsContainer__"], [class*="VibePage_entityMeta__"], [class*="VibePage_playerBlock__"] {
+[class*="MainPage_actionsContainer__"],
+[class*="VibePage_entityMeta__"],
+[class*="VibePage_playerBlock__"] {
     display: none !important;
 }
 
-.VibeResetButton_root__ju8pE.VibePage_context__CoYut.VibeResetButton_root_visible__OHA1w {
-    position: relative;
-    top: 30%;
-    transform: translateX(-16dvw);
-    transition:
-        transform 0.16s ease-out,
-        opacity 0.18s ease-out;
-    will-change: transform, opacity;
-}
-
-.ps-swiper-layout-shifted .VibeResetButton_root__ju8pE.VibePage_context__CoYut.VibeResetButton_root_visible__OHA1w {
-    transform: translateX(-0.2dvw) !important;
-}
-
-.swiper {
-    transition:
-        transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-        opacity 0.18s ease !important;
-    will-change: transform, opacity;
-}
-
-.ps-swiper-hidden-right {
-    transform: translateX(-140px) !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-}
-
-[data-test-id="VIBE_ANIMATION"] {
-    left: 0%;
-    top: -70%;
-    margin-left: 0;
-    transform: translateX(100px);
-    transition:
-        transform 0.16s ease-out,
-        opacity 0.18s ease-out;
-    will-change: transform, opacity;
-}
-
-[data-test-id="VIBE_ANIMATION"].ps-swiper-layout-shifted {
-    transform: translateX(21.2dvw) !important;
-    margin-left: 0 !important;
-}
-
-
 .VibeWidgetAnimation_root__7fpeP canvas {
-    transform: scale(1) !important;
+    transform: scale(1.3) !important;
     transform-origin: center center;
+    filter: blur(5px) invert(75%) grayscale(50%) saturate(1) contrast(2) brightness(1) sepia(1) hue-rotate(100deg) drop-shadow(3px 3px red) sepia(100%) drop-shadow(-3px -3px blue) !important;
 }
-
-.VibeWidgetMeta_artist__qN0Fe {
-    flex-direction: row !important;
-    top: -3%;
-}
-
 
 #ps-vibe-controls.ps-vibe-controls {
     position: absolute;
-    left: var(--ps-root-left, 33%);
+    left: 70%;
     top: 50%;
     z-index: 12;
     display: grid;
@@ -84,15 +33,6 @@
     backdrop-filter: blur(18px);
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
     pointer-events: auto;
-    transform: translate(-54%, -50%);
-    transition:
-        left 0.16s ease-out,
-        transform 0.16s ease-out,
-        opacity 0.18s ease-out;
-    will-change: transform;
-}
-
-#ps-vibe-controls.ps-vibe-controls.ps-swiper-layout-shifted {
     transform: translate(-50%, -50%);
 }
 
@@ -121,15 +61,6 @@
     width: 100%;
     min-height: 52px;
     border-radius: 12px;
-    transition:
-        transform 140ms ease,
-        box-shadow 140ms ease,
-        background-color 140ms ease;
-}
-
-.ps-vibe-play-button.ps-vibe-play-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 }
 
 .ps-vibe-settings-button.ps-vibe-settings-button {
@@ -141,18 +72,10 @@
     min-height: 48px;
     border-radius: 12px;
     background: transparent !important;
-    backdrop-filter: none !important;
-    box-shadow: none !important;
     color: rgb(255, 255, 255);
-    transition:
-        transform 140ms ease,
-        box-shadow 140ms ease,
-        background-color 140ms ease;
 }
 
 .ps-vibe-settings-button.ps-vibe-settings-button:hover {
-    transform: translateY(-1px);
-    box-shadow: none !important;
     background: rgba(255, 255, 255, 0.04) !important;
 }
 
@@ -206,7 +129,7 @@
 }
 
 .ps-vibe-status {
-    display: none
+    display: none;
 }
 
 .ps-vibe-controls {
@@ -215,367 +138,6 @@
     justify-content: center;
 }
 
-
-/* Native Player Recreation Styles */
-[data-ps-custom-player="true"].PlayerBarDesktopWithBackgroundProgressBar_root__bpmwN.PlayerBarDesktopWithBackgroundProgressBar_root__bpmwN {
-    position: absolute !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    margin-left: 0 !important;
-    margin-top: 0 !important;
-    width: 100% !important;
-    max-width: none !important;
-    z-index: 400 !important;
-    background-color: var(--player-average-color-background, #1a1a1a) !important;
-    height: 80px !important;
-    display: flex !important;
-    overflow: visible !important;
-}
-
-[data-ps-custom-player="true"] .PlayerBarDesktopWithBackgroundProgressBar_playerBar__mp0p9 {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    overflow: visible !important;
-}
-
-[data-ps-custom-player="true"] .ChangeTimecodeBackground_progressbar__M93Ie::before, .PlayerBarDesktopWithBackgroundProgressBar_progressBar___Q6eK::before {
-    opacity: 0;
-}
-
-[data-ps-custom-player="true"] .ChangeTimecodeBackground_progressbar__M93Ie {
-    top: 0;
-    left: 0;
-    z-index: 1;
-    height: 5%;
-    background: #ffffff;
-    width: var(--track-progress, 0%);
-}
-
-[data-ps-custom-player="true"] .ChangeTimecodeBackground_thumb__vx6J0 {
-    top: 2%;
-    left: var(--thumb-position, 0px);
-    z-index: 2;
-    width: 12px;
-    height: 12px;
-    background: var(--ym-slider-color-primary-enabled);
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-}
-
-
-
-[data-ps-custom-player="true"] .Timecode_root__TLT75 {
-    position: absolute;
-    top: 8px;
-    z-index: 4;
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-[data-ps-custom-player="true"] .Timecode_root_end__LLQsh {
-    right: 12px;
-}
-
-[data-ps-custom-player="true"] .Timecode_root_start__pHG5N {
-    left: 12px;
-}
-
-[data-ps-custom-player="true"] .PlayerBarDesktopWithBackgroundProgressBar_player__ASKKs {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 12px;
-    height: 100%;
-    padding-top: 4px;
-    overflow: visible !important;
-}
-
-[data-ps-custom-player="true"] .PlayerBarDesktopWithBackgroundProgressBar_info__YnvZ_ {
-    flex: 1;
-    min-width: 0;
-}
-
-[data-ps-custom-player="true"] .PlayerBarDesktopWithBackgroundProgressBar_infoCard__i0cbW {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-[data-ps-custom-player="true"] .PlayerBarDesktopWithBackgroundProgressBar_coverContainer__dkNCG {
-    position: relative;
-    margin-right: -80%;
-    width: 64px !important;
-    height: 64px !important;
-    flex-shrink: 0 !important;
-}
-
-[data-ps-custom-player="true"] .PlayerBarDesktopWithBackgroundProgressBar_cover__MKmEt {
-    width: 64px !important;
-    height: 64px !important;
-    border-radius: 8px;
-    object-fit: cover;
-    aspect-ratio: 1/1 !important;
-    transition: filter 0.18s ease, opacity 0.18s ease;
-}
-
-[data-ps-custom-player="true"] .PlayerBarDesktopWithBackgroundProgressBar_coverContainer__dkNCG:hover .PlayerBarDesktopWithBackgroundProgressBar_cover__MKmEt,
-[data-ps-custom-player="true"] .PlayerBarDesktopWithBackgroundProgressBar_cover__MKmEt:hover,
-[data-ps-custom-player="true"] .PlayerBarDesktopWithBackgroundProgressBar_cover__MKmEt:focus-visible {
-    filter: brightness(0.62);
-}
-
-[data-ps-custom-player="true"] .FullscreenPlayerDesktopButton_root__qGgoC {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 8px;
-}
-
-[data-ps-custom-player="true"] .PlayerBarDesktopWithBackgroundProgressBar_coverContainer__dkNCG:hover .FullscreenPlayerDesktopButton_root__qGgoC {
-    opacity: 1;
-}
-
-[data-ps-custom-player="true"] .PlayerBarDesktopWithBackgroundProgressBar_description__5jHke {
-    flex: 1;
-    min-width: 0;
-}
-
-[data-ps-custom-player="true"] .Meta_titleContainer__gDuXr {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-[data-ps-custom-player="true"] .Meta_text__Y5uYH {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-[data-ps-custom-player="true"] .Meta_title__GGBnH {
-    font-weight: 500;
-    color: #fff;
-}
-
-[data-ps-custom-player="true"] .Meta_artists__VnR52 {
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-[data-ps-custom-player="true"] .PlayerBarDesktopWithBackgroundProgressBar_sonata__mGFb_ {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-[data-ps-custom-player="true"] .BaseSonataControlsDesktop_root__E6wjA {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-}
-
-[data-ps-custom-player="true"] .BaseSonataControlsDesktop_sonataButtons__7vLtw {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-[data-ps-custom-player="true"] .BaseSonataControlsDesktop_sonataButton__GbwFt {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-[data-ps-custom-player="true"] .BaseSonataControlsDesktop_playButtonIcon__TlFqv {
-    width: 48px;
-    height: 48px;
-}
-
-[data-ps-custom-player="true"].PlayerBar_root__cXUnU button {
-    transition: color 0.18s ease, opacity 0.18s ease;
-}
-
-[data-ps-custom-player="true"].PlayerBar_root__cXUnU button svg,
-[data-ps-custom-player="true"].PlayerBar_root__cXUnU button .JjlbHZ4FaP9EAcR_1DxF {
-    transition: opacity 0.18s ease;
-}
-
-[data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="LIKE_BUTTON"],
-[data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="DISLIKE_BUTTON"],
-[data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id^="REPEAT_BUTTON"],
-[data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="PLAYERBAR_DESKTOP_SYNC_LYRICS_BUTTON"],
-[data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="PLAY_BUTTON"],
-[data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="PAUSE_BUTTON"] {
-    color: rgba(255, 255, 255, 0.72);
-    transition: filter 0.18s ease, opacity 0.18s ease;
-}
-
-[data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="PLAYERBAR_DESKTOP_SYNC_LYRICS_BUTTON"][data-state="enabled"] {
-    color: var(--ym-controls-color-primary-text-enabled, #ffffff);
-    opacity: 1;
-    cursor: pointer;
-    transition: filter 0.3s ease-in-out,
-        color 0.7s ease,
-        transform 0.3s ease-in-out;
-}
-
-[data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="PLAYERBAR_DESKTOP_SYNC_LYRICS_BUTTON"][data-state="disabled"] {
-    color: rgba(255, 255, 255, 0.34);
-    opacity: 1;
-    cursor: default;
-    pointer-events: none;
-}
-
-[data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="REPEAT_BUTTON_REPEAT"][data-state="all"] {
-    color: var(--ym-controls-color-primary-text-enabled, #ffffff);
-}
-
-[data-ps-custom-player="true"].PlayerBar_root__cXUnU [data-test-id="REPEAT_BUTTON_REPEAT_ONE"][data-state="one"] {
-    color: var(--ym-controls-color-primary-text-enabled, #ffffff);
-}
-
-[data-ps-custom-player="true"] .PlayerBarDesktopWithBackgroundProgressBar_meta__FhKTC {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    justify-content: flex-end;
-    overflow: visible !important;
-}
-
-[data-ps-custom-player="true"] .ChangeVolume_root__HDxtA {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-[data-ps-custom-player="true"] .ChangeVolume_sliderContainer__pvOZa {
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-    background: var(--ym-background-color-primary-enabled-popover);
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 8px;
-}
-
-[data-ps-custom-player="true"] .ChangeVolume_root__HDxtA:hover .ChangeVolume_sliderContainer__pvOZa {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-[data-ps-custom-player="true"] .ChangeVolume_wrapperSlider__9S1Vi {
-    height: 120px;
-    display: flex;
-    align-items: flex-end;
-}
-
-[data-ps-custom-player="true"] .ChangeVolume_slider__fCKGZ {
-    width: 120px;
-    transform: rotate(-90deg);
-    transform-origin: left center;
-}
-
-
-/* Hide original volume control */
-.VibePlayerBar_progress__Cri6E .ChangeVolume_root__HDxtA.VibePlayerBar_changeVolume__x7FHC {
+span.VibeResetButton_context__hsTlv[title="Моя волна"] {
     display: none !important;
-}
-
-[data-ps-custom-player="true"] .ChangeVolume_wrapperSlider__9S1Vi {
-    position: relative;
-    bottom: 10px !important;
-    min-height: 216px;
-}
-
-[data-ps-custom-player="true"] .ChangeVolume_slider__fCKGZ {
-    min-width: 10.4rem;
-    left: 780%;
-    height: 10px;
-}
-[data-ps-custom-player="true"] .ChangeVolume_wrapperSlider__9S1Vi {
-    background-color: #1a1a1a !important;
-}
-
-[data-ps-custom-player="true"] .ChangeVolume_sliderContainer__pvOZa > span {
-    position: absolute !important;
-    left: 0px !important;
-    right: 0px !important;
-    margin-inline: auto !important;
-    width: fit-content !important;
-    top: -0.6rem !important;
-    z-index: 10;
-}
-
-[data-ps-custom-player="true"] .ChangeVolume_sliderContainer__pvOZa {
-    background: none !important;
-    background-color: none !important;
-}
-
-.VibeContextMenu_root__872YP {
-    opacity: 0 !important;
-    pointer-events: none !important;
-    position: absolute !important;
-    left: -9999px !important;
-}
-
-.ZSjQrniulol6xKOq2Bou {
-    pointer-events: none !important;
-}
-
-div:has(> .dJZf0Flxzx7PR15g7zqM[class*="ArtistsMenu_root__"]) {
-    background: transparent !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-}
-
-/* [data-test-id="NAVBAR"] {
-    height: calc(100% - 53px);
-} */
-
-.VibePage_root__dGvPX {
-    height: calc(100% - 53px);
-}
-
-[data-test-id="QUALITY_SETTINGS_CONTEXT_MENU"] {
-    height: calc(100% - 13px);
-}
-
-.J9wTKytjOWG73QMoN5WP:hover, [data-test-id="DISLIKE_BUTTON"]:hover {
-    color: var(--accent-color, #ffffff);
-    transition: filter 0.3s ease-in-out,
-        color 0.7s ease,
-        transform 0.3s ease-in-out;
-}
-
-.dJZf0Flxzx7PR15g7zqM.ArtistsMenu_root__j5U2g {
-    position: relative;
-    transform: translate(300px, 550px);
-    background: transparent !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-}
-
-.ArtistsMenu_menuList__4v6Uo {
-    position: relative;
-    transform: translate(300px, 550px);
-    background: #1a1a1a !important;
 }
