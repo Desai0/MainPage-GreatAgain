@@ -363,8 +363,10 @@
 
             var active = isMyWave();
             var playing = isPlaying();
+            var rootExists = !!host.querySelector("#" + ROOT_ID);
 
             if (
+                rootExists &&
                 lastState.enabled === settings.enabled &&
                 lastState.hideVibeAnimation === settings.hideVibeAnimation &&
                 lastState.canvasBlur === settings.canvasBlur &&
