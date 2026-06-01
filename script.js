@@ -159,16 +159,22 @@
         }
     }
 
-    function toggleSettings() {
+    function closeSettings() {
+        settingsOpen = false;
+        document.body.classList.remove("ps-settings-open");
         var root = document.getElementById(ROOT_ID);
-        if (root) {
-            root.classList.toggle("ps-settings-open");
-        }
-        document.body.classList.toggle("ps-settings-open");
-        var VibePage_wheel__E_p8_ = document.querySelector(".VibePage_wheel__E_p8_");
-        if (VibePage_wheel__E_p8_) {
-            VibePage_wheel__E_p8_.classList.toggle("ps-VibePage_wheel__E_p8_-hidden-right");
-        }
+        if (root) root.classList.remove("ps-settings-open");
+        var wheel = document.querySelector(".VibePage_wheel__E_p8_");
+        if (wheel) wheel.classList.remove("ps-VibePage_wheel__E_p8_-hidden-right");
+    }
+
+    function toggleSettings() {
+        settingsOpen = !settingsOpen;
+        document.body.classList.toggle("ps-settings-open", settingsOpen);
+        var root = document.getElementById(ROOT_ID);
+        if (root) root.classList.toggle("ps-settings-open", settingsOpen);
+        var wheel = document.querySelector(".VibePage_wheel__E_p8_");
+        if (wheel) wheel.classList.toggle("ps-VibePage_wheel__E_p8_-hidden-right", settingsOpen);
     }
 
     function syncVibeAnimation(shouldHide) {
@@ -432,7 +438,7 @@
 
                 if (sw.slideTo && !sw.slideTo.isOverridden) {
                     var originalSlideTo = sw.slideTo;
-                    sw.slideTo = function(index, speed, runCallbacks, internal) {
+                    sw.slideTo = function (index, speed, runCallbacks, internal) {
                         return originalSlideTo.call(sw, index, 0, runCallbacks, internal);
                     };
                     sw.slideTo.isOverridden = true;
@@ -441,7 +447,7 @@
 
                 if (sw.slideToLoop && !sw.slideToLoop.isOverridden) {
                     var originalSlideToLoop = sw.slideToLoop;
-                    sw.slideToLoop = function(index, speed, runCallbacks, internal) {
+                    sw.slideToLoop = function (index, speed, runCallbacks, internal) {
                         return originalSlideToLoop.call(sw, index, 0, runCallbacks, internal);
                     };
                     sw.slideToLoop.isOverridden = true;
@@ -450,12 +456,12 @@
 
                 if (sw.slideNext && !sw.slideNext.originalMethod) {
                     var originalSlideNext = sw.slideNext;
-                    sw.slideNext = function() {};
+                    sw.slideNext = function () { };
                     sw.slideNext.originalMethod = originalSlideNext;
                 }
                 if (sw.slidePrev && !sw.slidePrev.originalMethod) {
                     var originalSlidePrev = sw.slidePrev;
-                    sw.slidePrev = function() {};
+                    sw.slidePrev = function () { };
                     sw.slidePrev.originalMethod = originalSlidePrev;
                 }
 
@@ -484,7 +490,7 @@
                                     if (typeof originalSlideTo === "function") {
                                         originalSlideTo.call(sw, index, 0, true, true);
                                     }
-                                } catch (err) {}
+                                } catch (err) { }
                             }
                         }
                     }
@@ -530,7 +536,7 @@
                                 if (typeof originalSlideTo === "function") {
                                     originalSlideTo.call(sw, swiperIndex, 0, true, true);
                                 }
-                            } catch (err) {}
+                            } catch (err) { }
                         }
                     }
                 }, 60);
@@ -562,6 +568,7 @@
 
     var playBtn = null;
     var settingsBtn = null;
+    var settingsOpen = false;
     var gridManager = new VibeGridManager();
 
     function ensureRoot(host) {
@@ -595,6 +602,16 @@
         root.appendChild(createStatusNode());
 
         host.appendChild(root);
+
+        // Восстанавливаем состояние настроек после пересоздания элемента
+        // (React мог уничтожить его при переходе между страницами)
+        if (settingsOpen) {
+            root.classList.add("ps-settings-open");
+            document.body.classList.add("ps-settings-open");
+            var wheel = document.querySelector(".VibePage_wheel__E_p8_");
+            if (wheel) wheel.classList.add("ps-VibePage_wheel__E_p8_-hidden-right");
+        }
+
         return root;
     }
 
@@ -695,7 +712,6 @@
 
         document.addEventListener("play", function () { setTimeout(update, 50); }, true);
         document.addEventListener("pause", function () { setTimeout(update, 50); }, true);
-        document.addEventListener("click", function () { setTimeout(update, 50); }, true);
 
         var patchState = function (type) {
             var orig = history[type];
