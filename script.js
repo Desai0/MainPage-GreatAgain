@@ -201,6 +201,25 @@
         }
     }
 
+    function throttle(fn, delay) {
+        var timer = null;
+        var lastCall = 0;
+        return function (...args) {
+            var now = Date.now();
+            var remaining = delay - (now - lastCall);
+            clearTimeout(timer);
+            if (remaining <= 0) {
+                lastCall = now;
+                fn.apply(this, args);
+            } else {
+                timer = setTimeout(() => {
+                    lastCall = Date.now();
+                    fn.apply(this, args);
+                }, remaining);
+            }
+        };
+    }
+
     class BaseControl {
         constructor(className, testId, label) {
             this.className = className;
@@ -321,6 +340,8 @@
         constructor() {
             this.hasScrollListener = false;
             this.hasClickListener = false;
+            this.activeSlides = [];
+            this.allSlides = [];
         }
 
         sync(host, customWaveWheelEnabled) {
@@ -381,6 +402,10 @@
             // Включаем кастомный функционал
             root.classList.add("ps-custom-wheel-active");
             wrapper.classList.add("ps-custom-wheel-active");
+
+            // Кешируем список слайдов для избежания повторных querySelector-запросов при каждом скролле и клике
+            this.activeSlides = Array.from(wrapper.querySelectorAll('[class*="WheelDesktop_slide"]:not([class*="swiper-slide-duplicate"])'));
+            this.allSlides = Array.from(wrapper.querySelectorAll('[class*="WheelDesktop_slide"]'));
 
             this.configureSwiper(root, wrapper);
             this.attachInterceptors(root, wrapper);
@@ -452,8 +477,7 @@
                     if (card) {
                         var slide = card.closest('[class*="WheelDesktop_slide"]');
                         if (slide) {
-                            var allSlides = Array.from(wrapper.querySelectorAll('[class*="WheelDesktop_slide"]'));
-                            var index = allSlides.indexOf(slide);
+                            var index = this.allSlides.indexOf(slide);
                             if (index !== -1 && sw.activeIndex !== index) {
                                 try {
                                     var originalSlideTo = (sw.slideTo && sw.slideTo.originalMethod) || sw.slideTo;
@@ -473,12 +497,14 @@
             }
 
             if (!root.hasScrollListener) {
-                var handleScroll = () => {
+                // Дросселируем (throttle) обработку скролла до одного вызова в 60мс (около 16 кадров/сек),
+                // чтобы полностью предотвратить лаги и layout thrashing при быстром скролле.
+                var handleScroll = throttle(() => {
                     var sw = root.swiper || wrapper.swiper;
                     if (!sw) return;
 
-                    var slides = Array.from(wrapper.querySelectorAll('[class*="WheelDesktop_slide"]:not([class*="swiper-slide-duplicate"])'));
-                    if (slides.length === 0) return;
+                    var slides = this.activeSlides;
+                    if (!slides || slides.length === 0) return;
 
                     var containerRect = root.getBoundingClientRect();
                     var containerCenter = containerRect.top + containerRect.height / 2;
@@ -497,8 +523,7 @@
                     });
 
                     if (closestSlide) {
-                        var allSlides = Array.from(wrapper.querySelectorAll('[class*="WheelDesktop_slide"]'));
-                        var swiperIndex = allSlides.indexOf(closestSlide);
+                        var swiperIndex = this.allSlides.indexOf(closestSlide);
                         if (swiperIndex !== -1 && sw.activeIndex !== swiperIndex) {
                             try {
                                 var originalSlideTo = (sw.slideTo && sw.slideTo.originalMethod) || sw.slideTo;
@@ -508,7 +533,7 @@
                             } catch (err) {}
                         }
                     }
-                };
+                }, 60);
 
                 root.addEventListener('scroll', handleScroll, { passive: true });
                 root.hasScrollListener = true;
@@ -596,7 +621,10 @@
             canvasBrightness: null,
             canvasScale: null,
             active: null,
-            playing: null
+            playing: null,
+            wrapper: null,
+            firstSlide: null,
+            slidesCount: 0
         };
 
         function update() {
@@ -611,7 +639,9 @@
                 host.insertBefore(vibe, host.firstChild);
             }
 
-            gridManager.sync(host, settings.customWaveWheel);
+            var wrapper = host.querySelector('[class*="WheelDesktop_wrapper"]');
+            var firstSlide = wrapper ? wrapper.querySelector('[class*="WheelDesktop_slide"]') : null;
+            var slidesCount = wrapper ? wrapper.querySelectorAll('[class*="WheelDesktop_slide"]').length : 0;
 
             var active = isMyWave();
             var playing = isPlaying();
@@ -628,7 +658,10 @@
                 lastState.canvasBrightness === settings.canvasBrightness &&
                 lastState.canvasScale === settings.canvasScale &&
                 lastState.active === active &&
-                lastState.playing === playing
+                lastState.playing === playing &&
+                lastState.wrapper === wrapper &&
+                lastState.firstSlide === firstSlide &&
+                lastState.slidesCount === slidesCount
             ) {
                 return;
             }
@@ -643,6 +676,11 @@
             lastState.canvasScale = settings.canvasScale;
             lastState.active = active;
             lastState.playing = playing;
+            lastState.wrapper = wrapper;
+            lastState.firstSlide = firstSlide;
+            lastState.slidesCount = slidesCount;
+
+            gridManager.sync(host, settings.customWaveWheel);
 
             syncVibeAnimation(settings.hideVibeAnimation);
             syncCanvasFilter(settings);
