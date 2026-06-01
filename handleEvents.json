@@ -18,6 +18,14 @@
                     "type": "button",
                     "bool": false,
                     "defaultParameter": false
+                },
+                {
+                    "id": "customWaveWheel",
+                    "name": "Кастомное колесо волны",
+                    "description": "Преобразует 3D-колесо в премиальный плоский Grid-список с нативным скроллом.",
+                    "type": "button",
+                    "bool": true,
+                    "defaultParameter": true
                 }
             ]
         },

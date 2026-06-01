@@ -14,6 +14,7 @@
         };
         return {
             enabled: val("enabled", true),
+            customWaveWheel: val("customWaveWheel", true),
             hideVibeAnimation: val("hideVibeAnimation", false),
             canvasBlur: val("canvasBlur", 0),
             canvasSaturate: val("canvasSaturate", 1),
@@ -200,75 +201,331 @@
         }
     }
 
-    function createPlayButton() {
-        var button = document.createElement("button");
-        button.className = "cpeagBA1_PblpJn8Xgtv UDMYhpDjiAFT3xUx268O dgV08FKVLZKFsucuiryn IlG7b1K0AD7E7AMx6F5p qU2apWBO1yyEK0lZ3lPO kc5CjvU5hT9KEj0iTt3C PlayButton_root__nYKdN VibeBlock_playButton__6xU55 ps-vibe-play-button";
-        button.type = "button";
-        button.dataset.testId = "PS_VIBE_PLAY_BUTTON";
-        button.setAttribute("aria-label", "Моя волна");
+    class BaseControl {
+        constructor(className, testId, label) {
+            this.className = className;
+            this.testId = testId;
+            this.label = label;
+            this.element = this.createBaseButton();
+        }
 
-        var iconWrap = document.createElement("span");
-        iconWrap.className = "JjlbHZ4FaP9EAcR_1DxF ps-vibe-icon-wrap";
-
-        var playIcon = createSvg("J9wTKytjOWG73QMoN5WP elJfazUBui03YWZgHCbW PlayButton_icon__t_THQ DzJFnuf7XgdkFh28JAsM ps-vibe-play-glyph", "playVibe_s");
-        playIcon.dataset.iconRole = "play";
-        iconWrap.appendChild(playIcon);
-
-        var pauseIcon = document.createElement("span");
-        pauseIcon.className = "PlayButton_icon__t_THQ DzJFnuf7XgdkFh28JAsM ps-vibe-pause-glyph";
-        pauseIcon.dataset.iconRole = "pause";
-        pauseIcon.setAttribute("aria-hidden", "true");
-
-        var pauseBarLeft = document.createElement("span");
-        pauseBarLeft.className = "ps-vibe-pause-bar";
-        var pauseBarRight = document.createElement("span");
-        pauseBarRight.className = "ps-vibe-pause-bar";
-        pauseIcon.appendChild(pauseBarLeft);
-        pauseIcon.appendChild(pauseBarRight);
-        iconWrap.appendChild(pauseIcon);
-        button.appendChild(iconWrap);
-
-        var label = document.createElement("span");
-        label.className = "ps-vibe-button-label";
-        label.textContent = "Моя волна";
-        button.appendChild(label);
-
-        button.addEventListener("click", function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            toggleMyWave().catch(console.error);
-        });
-
-        return button;
+        createBaseButton() {
+            var btn = document.createElement("button");
+            btn.className = this.className;
+            btn.type = "button";
+            btn.dataset.testId = this.testId;
+            btn.setAttribute("aria-label", this.label);
+            return btn;
+        }
     }
 
-    function createSettingsButton() {
-        var button = document.createElement("button");
-        button.className = "cpeagBA1_PblpJn8Xgtv iJVAJMgccD4vj4E4o068 zIMibMuH7wcqUoW7KH1B IlG7b1K0AD7E7AMx6F5p nHWc2sto1C6Gm0Dpw_l0 C_QGmfTz6UFX93vfPt6Z qU2apWBO1yyEK0lZ3lPO kc5CjvU5hT9KEj0iTt3C VibeSettings_toggleSettingsButton__j6fIU ps-vibe-settings-button";
-        button.type = "button";
-        button.dataset.testId = "PS_VIBE_SETTINGS_BUTTON";
-        button.setAttribute("aria-label", "Настроить Мою волну");
-        button.setAttribute("aria-haspopup", "dialog");
-        button.setAttribute("aria-live", "off");
-        button.setAttribute("aria-busy", "false");
+    class PlayButton extends BaseControl {
+        constructor(onClick) {
+            super(
+                "cpeagBA1_PblpJn8Xgtv UDMYhpDjiAFT3xUx268O dgV08FKVLZKFsucuiryn IlG7b1K0AD7E7AMx6F5p qU2apWBO1yyEK0lZ3lPO kc5CjvU5hT9KEj0iTt3C PlayButton_root__nYKdN VibeBlock_playButton__6xU55 ps-vibe-play-button",
+                "PS_VIBE_PLAY_BUTTON",
+                "Моя волна"
+            );
+            this.onClick = onClick;
+            this.init();
+        }
 
-        var content = document.createElement("span");
-        content.className = "JjlbHZ4FaP9EAcR_1DxF";
-        content.appendChild(createSvg("J9wTKytjOWG73QMoN5WP elJfazUBui03YWZgHCbW l3tE1hAMmBj2aoPPwU08", "filter_xxs"));
+        init() {
+            var iconWrap = document.createElement("span");
+            iconWrap.className = "JjlbHZ4FaP9EAcR_1DxF ps-vibe-icon-wrap";
 
-        var label = document.createElement("span");
-        label.className = "ps-vibe-settings-label";
-        label.textContent = "Настроить";
-        content.appendChild(label);
-        button.appendChild(content);
+            var playIcon = createSvg("J9wTKytjOWG73QMoN5WP elJfazUBui03YWZgHCbW PlayButton_icon__t_THQ DzJFnuf7XgdkFh28JAsM ps-vibe-play-glyph", "playVibe_s");
+            playIcon.dataset.iconRole = "play";
+            iconWrap.appendChild(playIcon);
 
-        button.addEventListener("click", function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            toggleSettings();
-        });
+            var pauseIcon = document.createElement("span");
+            pauseIcon.className = "PlayButton_icon__t_THQ DzJFnuf7XgdkFh28JAsM ps-vibe-pause-glyph";
+            pauseIcon.dataset.iconRole = "pause";
+            pauseIcon.setAttribute("aria-hidden", "true");
 
-        return button;
+            var pauseBarLeft = document.createElement("span");
+            pauseBarLeft.className = "ps-vibe-pause-bar";
+            var pauseBarRight = document.createElement("span");
+            pauseBarRight.className = "ps-vibe-pause-bar";
+            pauseIcon.appendChild(pauseBarLeft);
+            pauseIcon.appendChild(pauseBarRight);
+            iconWrap.appendChild(pauseIcon);
+            this.element.appendChild(iconWrap);
+
+            var labelSpan = document.createElement("span");
+            labelSpan.className = "ps-vibe-button-label";
+            labelSpan.textContent = "Моя волна";
+            this.element.appendChild(labelSpan);
+
+            this.element.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.onClick();
+            });
+        }
+
+        syncState(active, playing) {
+            syncDataset(this.element, "state", active ? (playing ? "pause" : "resume") : "start");
+            syncAttr(this.element, "aria-label", active ? (playing ? "Пауза Моей волны" : "Продолжить Мою волну") : "Запустить Мою волну");
+
+            var playGlyph = this.element.querySelector('[data-icon-role="play"]');
+            var pauseGlyph = this.element.querySelector('[data-icon-role="pause"]');
+            var showPause = active && playing;
+
+            if (playGlyph) {
+                playGlyph.setAttribute("aria-hidden", showPause ? "true" : "false");
+                playGlyph.style.display = showPause ? "none" : "";
+            }
+            if (pauseGlyph) {
+                pauseGlyph.setAttribute("aria-hidden", showPause ? "false" : "true");
+                pauseGlyph.style.display = showPause ? "inline-flex" : "none";
+            }
+        }
+    }
+
+    class SettingsButton extends BaseControl {
+        constructor(onClick) {
+            super(
+                "cpeagBA1_PblpJn8Xgtv iJVAJMgccD4vj4E4o068 zIMibMuH7wcqUoW7KH1B IlG7b1K0AD7E7AMx6F5p nHWc2sto1C6Gm0Dpw_l0 C_QGmfTz6UFX93vfPt6Z qU2apWBO1yyEK0lZ3lPO kc5CjvU5hT9KEj0iTt3C VibeSettings_toggleSettingsButton__j6fIU ps-vibe-settings-button",
+                "PS_VIBE_SETTINGS_BUTTON",
+                "Настроить Мою волну"
+            );
+            this.onClick = onClick;
+            this.init();
+        }
+
+        init() {
+            this.element.setAttribute("aria-haspopup", "dialog");
+            this.element.setAttribute("aria-live", "off");
+            this.element.setAttribute("aria-busy", "false");
+
+            var content = document.createElement("span");
+            content.className = "JjlbHZ4FaP9EAcR_1DxF";
+            content.appendChild(createSvg("J9wTKytjOWG73QMoN5WP elJfazUBui03YWZgHCbW l3tE1hAMmBj2aoPPwU08", "filter_xxs"));
+
+            var labelSpan = document.createElement("span");
+            labelSpan.className = "ps-vibe-settings-label";
+            labelSpan.textContent = "Настроить";
+            content.appendChild(labelSpan);
+            this.element.appendChild(content);
+
+            this.element.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.onClick();
+            });
+        }
+    }
+
+    class VibeGridManager {
+        constructor() {
+            this.hasScrollListener = false;
+            this.hasClickListener = false;
+        }
+
+        sync(host, customWaveWheelEnabled) {
+            var wrapper = host.querySelector('[class*="WheelDesktop_wrapper"]');
+            if (!wrapper) return;
+
+            var root = wrapper.parentElement;
+            if (!root) return;
+
+            if (!customWaveWheelEnabled) {
+                // Выключаем весь кастомный функционал, восстанавливаем исходное состояние колеса
+                root.classList.remove("ps-custom-wheel-active");
+                wrapper.classList.remove("ps-custom-wheel-active");
+
+                root.classList.remove("swiper-no-swiping");
+                wrapper.classList.remove("swiper-no-swiping");
+
+                var slides = wrapper.querySelectorAll('[class*="WheelDesktop_slide"]');
+                for (var i = 0; i < slides.length; i++) {
+                    slides[i].classList.remove("swiper-no-swiping");
+                }
+
+                var cards = wrapper.querySelectorAll('[class*="WheelItem_root"]');
+                for (var j = 0; j < cards.length; j++) {
+                    cards[j].classList.remove("swiper-no-swiping");
+                }
+
+                var sw = root.swiper || wrapper.swiper;
+                if (sw) {
+                    try {
+                        if (sw.slideTo && sw.slideTo.isOverridden) {
+                            sw.slideTo = sw.slideTo.originalMethod;
+                        }
+                        if (sw.slideToLoop && sw.slideToLoop.isOverridden) {
+                            sw.slideToLoop = sw.slideToLoop.originalMethod;
+                        }
+                        if (sw.slideNext && sw.slideNext.originalMethod) {
+                            sw.slideNext = sw.slideNext.originalMethod;
+                        }
+                        if (sw.slidePrev && sw.slidePrev.originalMethod) {
+                            sw.slidePrev = sw.slidePrev.originalMethod;
+                        }
+                        if (sw.mousewheel && typeof sw.mousewheel.enable === "function") {
+                            sw.mousewheel.enable();
+                        }
+                        if (sw.params) {
+                            sw.params.noSwiping = false;
+                            sw.params.allowSlideNext = true;
+                            sw.params.allowSlidePrev = true;
+                        }
+                    } catch (e) {
+                        // Игнорируем ошибки восстановления
+                    }
+                }
+                return;
+            }
+
+            // Включаем кастомный функционал
+            root.classList.add("ps-custom-wheel-active");
+            wrapper.classList.add("ps-custom-wheel-active");
+
+            this.configureSwiper(root, wrapper);
+            this.attachInterceptors(root, wrapper);
+            this.calibrateSwiping(wrapper);
+        }
+
+        configureSwiper(root, wrapper) {
+            var sw = root.swiper || wrapper.swiper;
+            if (!sw) return;
+
+            try {
+                if (sw.params) {
+                    sw.params.slideToClickedSlide = true;
+                    sw.params.preventClicks = false;
+                    sw.params.preventClicksPropagation = false;
+                    sw.params.noSwiping = true;
+                    sw.params.noSwipingClass = "swiper-no-swiping";
+                    sw.params.allowSlideNext = false;
+                    sw.params.allowSlidePrev = false;
+                    if (sw.params.mousewheel) {
+                        sw.params.mousewheel.enabled = false;
+                    }
+                }
+
+                if (sw.slideTo && !sw.slideTo.isOverridden) {
+                    var originalSlideTo = sw.slideTo;
+                    sw.slideTo = function(index, speed, runCallbacks, internal) {
+                        return originalSlideTo.call(sw, index, 0, runCallbacks, internal);
+                    };
+                    sw.slideTo.isOverridden = true;
+                    sw.slideTo.originalMethod = originalSlideTo;
+                }
+
+                if (sw.slideToLoop && !sw.slideToLoop.isOverridden) {
+                    var originalSlideToLoop = sw.slideToLoop;
+                    sw.slideToLoop = function(index, speed, runCallbacks, internal) {
+                        return originalSlideToLoop.call(sw, index, 0, runCallbacks, internal);
+                    };
+                    sw.slideToLoop.isOverridden = true;
+                    sw.slideToLoop.originalMethod = originalSlideToLoop;
+                }
+
+                if (sw.slideNext && !sw.slideNext.originalMethod) {
+                    var originalSlideNext = sw.slideNext;
+                    sw.slideNext = function() {};
+                    sw.slideNext.originalMethod = originalSlideNext;
+                }
+                if (sw.slidePrev && !sw.slidePrev.originalMethod) {
+                    var originalSlidePrev = sw.slidePrev;
+                    sw.slidePrev = function() {};
+                    sw.slidePrev.originalMethod = originalSlidePrev;
+                }
+
+                if (sw.mousewheel && typeof sw.mousewheel.disable === "function") {
+                    sw.mousewheel.disable();
+                }
+            } catch (e) {
+                // Игнорируем ошибки Swiper
+            }
+        }
+
+        attachInterceptors(root, wrapper) {
+            if (!wrapper.hasClickListener) {
+                var intercept = (e) => {
+                    var sw = root.swiper || wrapper.swiper;
+                    if (!sw) return;
+
+                    var card = e.target.closest('[class*="WheelItem_root"]');
+                    if (card) {
+                        var slide = card.closest('[class*="WheelDesktop_slide"]');
+                        if (slide) {
+                            var allSlides = Array.from(wrapper.querySelectorAll('[class*="WheelDesktop_slide"]'));
+                            var index = allSlides.indexOf(slide);
+                            if (index !== -1 && sw.activeIndex !== index) {
+                                try {
+                                    var originalSlideTo = (sw.slideTo && sw.slideTo.originalMethod) || sw.slideTo;
+                                    if (typeof originalSlideTo === "function") {
+                                        originalSlideTo.call(sw, index, 0, true, true);
+                                    }
+                                } catch (err) {}
+                            }
+                        }
+                    }
+                };
+
+                wrapper.addEventListener('click', intercept, { capture: true });
+                wrapper.addEventListener('mousedown', intercept, { capture: true });
+                wrapper.addEventListener('touchstart', intercept, { capture: true });
+                wrapper.hasClickListener = true;
+            }
+
+            if (!root.hasScrollListener) {
+                var handleScroll = () => {
+                    var sw = root.swiper || wrapper.swiper;
+                    if (!sw) return;
+
+                    var slides = Array.from(wrapper.querySelectorAll('[class*="WheelDesktop_slide"]:not([class*="swiper-slide-duplicate"])'));
+                    if (slides.length === 0) return;
+
+                    var containerRect = root.getBoundingClientRect();
+                    var containerCenter = containerRect.top + containerRect.height / 2;
+
+                    var closestSlide = null;
+                    var minDistance = Infinity;
+
+                    slides.forEach((slide) => {
+                        var rect = slide.getBoundingClientRect();
+                        var slideCenter = rect.top + rect.height / 2;
+                        var distance = Math.abs(slideCenter - containerCenter);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closestSlide = slide;
+                        }
+                    });
+
+                    if (closestSlide) {
+                        var allSlides = Array.from(wrapper.querySelectorAll('[class*="WheelDesktop_slide"]'));
+                        var swiperIndex = allSlides.indexOf(closestSlide);
+                        if (swiperIndex !== -1 && sw.activeIndex !== swiperIndex) {
+                            try {
+                                var originalSlideTo = (sw.slideTo && sw.slideTo.originalMethod) || sw.slideTo;
+                                if (typeof originalSlideTo === "function") {
+                                    originalSlideTo.call(sw, swiperIndex, 0, true, true);
+                                }
+                            } catch (err) {}
+                        }
+                    }
+                };
+
+                root.addEventListener('scroll', handleScroll, { passive: true });
+                root.hasScrollListener = true;
+            }
+        }
+
+        calibrateSwiping(wrapper) {
+            var uncalibratedSlides = wrapper.querySelectorAll('[class*="WheelDesktop_slide"]:not(.swiper-no-swiping)');
+            for (var i = 0; i < uncalibratedSlides.length; i++) {
+                uncalibratedSlides[i].classList.add("swiper-no-swiping");
+            }
+
+            var uncalibratedCards = wrapper.querySelectorAll('[class*="WheelItem_root"]:not(.swiper-no-swiping)');
+            for (var j = 0; j < uncalibratedCards.length; j++) {
+                uncalibratedCards[j].classList.add("swiper-no-swiping");
+            }
+        }
     }
 
     function createStatusNode() {
@@ -277,6 +534,10 @@
         node.dataset.testId = "PS_VIBE_STATUS";
         return node;
     }
+
+    var playBtn = null;
+    var settingsBtn = null;
+    var gridManager = new VibeGridManager();
 
     function ensureRoot(host) {
         var root = host.querySelector("#" + ROOT_ID);
@@ -300,8 +561,12 @@
         header.appendChild(title);
         header.appendChild(subtitle);
         root.appendChild(header);
-        root.appendChild(createPlayButton());
-        root.appendChild(createSettingsButton());
+
+        playBtn = new PlayButton(() => toggleMyWave().catch(console.error));
+        settingsBtn = new SettingsButton(() => toggleSettings());
+
+        root.appendChild(playBtn.element);
+        root.appendChild(settingsBtn.element);
         root.appendChild(createStatusNode());
 
         host.appendChild(root);
@@ -309,26 +574,10 @@
     }
 
     function syncUi(root) {
-        var playButton = root.querySelector(".ps-vibe-play-button");
-        if (!playButton) return;
-
-        var active = isMyWave();
-        var playing = isPlaying();
-
-        syncDataset(playButton, "state", active ? (playing ? "pause" : "resume") : "start");
-        syncAttr(playButton, "aria-label", active ? (playing ? "Пауза Моей волны" : "Продолжить Мою волну") : "Запустить Мою волну");
-
-        var playGlyph = playButton.querySelector('[data-icon-role="play"]');
-        var pauseGlyph = playButton.querySelector('[data-icon-role="pause"]');
-        var showPause = active && playing;
-
-        if (playGlyph) {
-            playGlyph.setAttribute("aria-hidden", showPause ? "true" : "false");
-            playGlyph.style.display = showPause ? "none" : "";
-        }
-        if (pauseGlyph) {
-            pauseGlyph.setAttribute("aria-hidden", showPause ? "false" : "true");
-            pauseGlyph.style.display = showPause ? "inline-flex" : "none";
+        if (playBtn) {
+            var active = isMyWave();
+            var playing = isPlaying();
+            playBtn.syncState(active, playing);
         }
     }
 
@@ -339,6 +588,7 @@
 
         var lastState = {
             enabled: null,
+            customWaveWheel: null,
             hideVibeAnimation: null,
             canvasBlur: null,
             canvasSaturate: null,
@@ -361,6 +611,8 @@
                 host.insertBefore(vibe, host.firstChild);
             }
 
+            gridManager.sync(host, settings.customWaveWheel);
+
             var active = isMyWave();
             var playing = isPlaying();
             var rootExists = !!host.querySelector("#" + ROOT_ID);
@@ -368,6 +620,7 @@
             if (
                 rootExists &&
                 lastState.enabled === settings.enabled &&
+                lastState.customWaveWheel === settings.customWaveWheel &&
                 lastState.hideVibeAnimation === settings.hideVibeAnimation &&
                 lastState.canvasBlur === settings.canvasBlur &&
                 lastState.canvasSaturate === settings.canvasSaturate &&
@@ -381,6 +634,7 @@
             }
 
             lastState.enabled = settings.enabled;
+            lastState.customWaveWheel = settings.customWaveWheel;
             lastState.hideVibeAnimation = settings.hideVibeAnimation;
             lastState.canvasBlur = settings.canvasBlur;
             lastState.canvasSaturate = settings.canvasSaturate;
