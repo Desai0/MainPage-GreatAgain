@@ -1,6 +1,7 @@
 {
     "enabled": true,
     "hideVibeAnimation": false,
+    "customWaveWheel": true,
     "canvasBlur": 0,
     "canvasSaturate": 1,
     "canvasContrast": 1,
