@@ -25,12 +25,26 @@
         };
     }
 
-    function isMyWave() {
+    function getCurrentContext() {
         var ctx = window.sonataState?.currentContext;
         if (ctx && ctx.observableValue) ctx = ctx.observableValue.value;
         if (ctx && ctx.value) ctx = ctx.value;
-        if (!ctx) return false;
-        return ctx.type === "vibe" || ctx.contextData?.type === "vibe" || ctx.isVibeStarted || ctx.rotorResource != null;
+        return ctx || null;
+    }
+
+    function getVibeStationId() {
+        var ctx = getCurrentContext();
+        if (!ctx) return "";
+        return String(
+            ctx.contextData?.meta?.session?.wave?.stationId ||
+            ctx.contextData?.meta?.id ||
+            ctx.contextData?.seeds?.[0] ||
+            ""
+        ).toLowerCase();
+    }
+
+    function isMyWave() {
+        return getVibeStationId() === "user:onyourwave";
     }
 
     function isPlaying() {
@@ -137,26 +151,94 @@
         }
     }
 
-    async function toggleMyWave() {
-        if (isMyWave()) {
-            var btn = document.querySelector(isPlaying() ? '[data-test-id="PAUSE_BUTTON"]' : '[data-test-id="PLAY_BUTTON"]');
-            click(btn);
-            return;
-        }
+    function findMyWaveResetControl() {
+        var label = document.querySelector('[data-test-id="RESET_VIBE_CONTEXT_STATIC_TEXT"]');
+        if (!label) return null;
 
+        return label.closest("button, [role='button'], a") ||
+            label.closest('[class*="VibeResetButton_container"]') ||
+            label.closest('[class*="VibeResetButton_root"]');
+    }
+
+    function findPlayerToggleButton() {
+        return document.querySelector(
+            isPlaying()
+                ? '[data-test-id="PLAYERBAR_DESKTOP"] [data-test-id="PAUSE_BUTTON"], [data-test-id="VIBE_PLAYERBAR"] [data-test-id="PAUSE_BUTTON"]'
+                : '[data-test-id="PLAYERBAR_DESKTOP"] [data-test-id="PLAY_BUTTON"], [data-test-id="VIBE_PLAYERBAR"] [data-test-id="PLAY_BUTTON"]'
+        );
+    }
+
+    async function waitForMyWave(timeoutMs) {
+        var startedAt = Date.now();
+        while (Date.now() - startedAt < timeoutMs) {
+            if (isMyWave()) return true;
+            await new Promise(function (resolve) { setTimeout(resolve, 100); });
+        }
+        return isMyWave();
+    }
+
+    async function resetCurrentVibeToMyWave() {
+        var context = getCurrentContext();
+        var sessionController = context?.sessionController;
+        var player = window.pulsesyncApi?.playerInstance;
+
+        if (typeof sessionController?.defaultSessionNew !== "function") return false;
+
+        var session = await sessionController.defaultSessionNew();
+        var stationId = String(session?.wave?.stationId || "").toLowerCase();
+        if (stationId !== "user:onyourwave") return false;
+
+        if (typeof player?.restartContext === "function") {
+            await player.restartContext({ playAfterRestart: true });
+        } else if (!isPlaying()) {
+            click(findPlayerToggleButton());
+        }
+        return true;
+    }
+
+    async function startMyWave() {
         var nav = document.querySelector('[data-test-id="NAVBAR_NAVIGATION_ITEM_HOME"]');
         click(nav);
 
-        for (var i = 0; i < 20; i++) {
-            var trigger = Array.from(document.querySelectorAll("button")).find(function (b) {
-                return /включить мою волну/i.test(b.getAttribute("aria-label") || "");
-            });
-            if (trigger) {
-                click(trigger);
-                break;
+        if (!isMyWave()) {
+            try {
+                if (await resetCurrentVibeToMyWave()) return;
+            } catch (error) {
+                console.debug("[YM Old Home UI] Native My Wave reset failed:", error);
             }
-            await new Promise(function (resolve) { setTimeout(resolve, 100); });
+
+            var resetControl = findMyWaveResetControl();
+            click(resetControl);
+
+            if (!await waitForMyWave(500)) {
+                if (typeof window.pulsesyncApi?.playVibe === "function") {
+                    window.pulsesyncApi.playVibe({ screen: "landing" });
+                }
+                await waitForMyWave(500);
+            }
         }
+
+        if (!isMyWave()) {
+            var trigger = Array.from(document.querySelectorAll("button")).find(function (button) {
+                if (button.dataset.testId === "PS_VIBE_PLAY_BUTTON") return false;
+                return /(?:включить|запустить)\s+мою\s+волну/i.test(button.getAttribute("aria-label") || "");
+            });
+            click(trigger);
+            await waitForMyWave(800);
+        }
+
+        if (isMyWave() && !isPlaying()) {
+            click(findPlayerToggleButton());
+        }
+    }
+
+    async function toggleMyWave() {
+        if (isMyWave()) {
+            click(findPlayerToggleButton());
+            return;
+        }
+
+        await startMyWave();
     }
 
     function closeSettings() {

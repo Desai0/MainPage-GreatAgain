@@ -2,7 +2,9 @@
 
 [class*="MainPage_actionsContainer__"],
 [class*="VibePage_entityMeta__"],
-[class*="VibePage_playerBlock__"] {
+[class*="VibePage_playerBlock__"],
+[class*="MainPage_actionsBar__agoxp"],
+[class*="MainPage_betaSlot_newVibe__DGtXm"] {
     display: none !important;
 }
 
@@ -11,16 +13,26 @@
     overflow: visible !important;
 }
 
+.VibeResetButton_root__ju8pE {
+    margin-top: -300px !important;
+    background: none !important;
+    backdrop-filter: none !important;
+    background-color: none !important;
+}
+
 [data-test-id="VIBE_ANIMATION"] {
+    margin-left: 18.3vw !important;
     position: absolute !important;
-    margin-top: 9dvh;
-    margin-left: -2vw !important;
     pointer-events: none !important;
     transition: left 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
 }
 
 .ps-settings-open [data-test-id="VIBE_ANIMATION"] {
-    left: -20% !important;
+    left: 24.6vw !important;
+}
+
+.VibeWidgetAnimation_root__7fpeP canvas {
+    scale: 0.55 !important;
 }
 
 .VibeResetButton_root__ju8pE {
@@ -453,7 +465,6 @@ span.VibeResetButton_context__hsTlv[title="Моя волна"] {
     width: 100% !important;
 }
 
-/* Название ("grust200", "Лето внутри") */
 [class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelItem_title"] {
     font-size: 13px !important;
     font-weight: 600 !important;
@@ -466,4 +477,8 @@ span.VibeResetButton_context__hsTlv[title="Моя волна"] {
 
 [class*="WheelDesktop_root"].ps-custom-wheel-active.VibePage_wheel__E_p8_ {
     margin-left: 60px !important;
+}
+
+.VibeResetButton_root__ju8pE {
+    margin-left: 0px !important;
 }
