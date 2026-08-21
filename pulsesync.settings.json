@@ -1,7 +1,7 @@
 {
     "enabled": true,
     "hideVibeAnimation": false,
-    "customWaveWheel": true,
+    "newHomeUiVariant": "0",
     "canvasBlur": 0,
     "canvasSaturate": 1,
     "canvasContrast": 1,

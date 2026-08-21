@@ -27,8 +27,13 @@
     transition: left 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
 }
 
-.ps-settings-open [data-test-id="VIBE_ANIMATION"] {
+.ps-settings-open [data-test-id="VIBE_ANIMATION"],
+.ps-variant-old [data-test-id="VIBE_ANIMATION"] {
     left: 24.6vw !important;
+}
+
+.ps-variant-old [data-test-id="VIBE_ANIMATION"] {
+    transition: none !important;
 }
 
 .VibeWidgetAnimation_root__7fpeP canvas {
@@ -41,8 +46,13 @@
     transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
 }
 
-.ps-settings-open .VibeResetButton_root__ju8pE {
+.ps-settings-open .VibeResetButton_root__ju8pE,
+.ps-variant-old .VibeResetButton_root__ju8pE {
     transform: translateX(-18.3vw) !important;
+}
+
+.ps-variant-old .VibeResetButton_root__ju8pE {
+    transition: none !important;
 }
 
 .VibePage_wheel__E_p8_ {
@@ -51,11 +61,16 @@
     opacity: 0.9 !important;
 }
 
-.ps-settings-open .VibePage_wheel__E_p8_ {
+.ps-settings-open .VibePage_wheel__E_p8_,
+.ps-variant-old .VibePage_wheel__E_p8_ {
     transform: translateX(-15vw) !important;
     opacity: 0 !important;
     pointer-events: none !important;
     visibility: hidden !important;
+}
+
+.ps-variant-old .VibePage_wheel__E_p8_ {
+    display: none !important;
 }
 
 .VibeWidgetAnimation_root__7fpeP canvas {
@@ -87,8 +102,13 @@
     transition: left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-#ps-vibe-controls.ps-vibe-controls.ps-settings-open {
+#ps-vibe-controls.ps-vibe-controls.ps-settings-open,
+.ps-variant-old #ps-vibe-controls.ps-vibe-controls {
     left: 50%;
+}
+
+.ps-variant-old #ps-vibe-controls.ps-vibe-controls {
+    transition: none !important;
 }
 
 #ps-vibe-controls[hidden] {

@@ -12,15 +12,32 @@
             }
             return entry !== undefined ? entry : fallback;
         };
+        var normalizeVariant = function (v) {
+            if (v === "old" || v === "0" || v === 0) return "old";
+            if (v === "customWaveWheel" || v === "1" || v === 1) return "customWaveWheel";
+            if (v === "new" || v === "2" || v === 2) return "new";
+            return null;
+        };
+        var rawVariant = val("newHomeUiVariant", undefined);
+        var variant = normalizeVariant(rawVariant);
+        if (!variant) {
+            var legacyCustom = val("customWaveWheel", undefined);
+            if (legacyCustom !== undefined) {
+                variant = legacyCustom ? "customWaveWheel" : "new";
+            } else {
+                variant = "old";
+            }
+        }
         return {
             enabled: val("enabled", true),
-            customWaveWheel: val("customWaveWheel", true),
+            newHomeUiVariant: variant,
+            customWaveWheel: variant === "customWaveWheel",
             hideVibeAnimation: val("hideVibeAnimation", false),
             canvasBlur: val("canvasBlur", 0),
             canvasSaturate: val("canvasSaturate", 1),
             canvasContrast: val("canvasContrast", 1),
             canvasBrightness: val("canvasBrightness", 1),
-            canvasScale: val("canvasScale", 1),
+            canvasScale: val("canvasScale", 1.2),
             onChange: store ? store.onChange.bind(store) : function () { }
         };
     }
@@ -241,6 +258,17 @@
         await startMyWave();
     }
 
+    function openNativeVibeSettings() {
+        var target = document.querySelector('[data-test-id="WHEEL_SETTING_ITEM"]') ||
+            document.querySelector('[data-swiper-slide-index="1"] [role="button"]') ||
+            document.querySelector('[data-swiper-slide-index="1"]');
+        if (target) {
+            click(target);
+            return true;
+        }
+        return false;
+    }
+
     function closeSettings() {
         settingsOpen = false;
         document.body.classList.remove("ps-settings-open");
@@ -419,7 +447,12 @@
             this.element.addEventListener("click", (event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                this.onClick();
+                var settings = getSettings();
+                if (settings.newHomeUiVariant === "old") {
+                    openNativeVibeSettings();
+                } else {
+                    this.onClick();
+                }
             });
         }
     }
@@ -712,6 +745,7 @@
 
         var lastState = {
             enabled: null,
+            newHomeUiVariant: null,
             customWaveWheel: null,
             hideVibeAnimation: null,
             canvasBlur: null,
@@ -749,6 +783,7 @@
             if (
                 rootExists &&
                 lastState.enabled === settings.enabled &&
+                lastState.newHomeUiVariant === settings.newHomeUiVariant &&
                 lastState.customWaveWheel === settings.customWaveWheel &&
                 lastState.hideVibeAnimation === settings.hideVibeAnimation &&
                 lastState.canvasBlur === settings.canvasBlur &&
@@ -766,6 +801,7 @@
             }
 
             lastState.enabled = settings.enabled;
+            lastState.newHomeUiVariant = settings.newHomeUiVariant;
             lastState.customWaveWheel = settings.customWaveWheel;
             lastState.hideVibeAnimation = settings.hideVibeAnimation;
             lastState.canvasBlur = settings.canvasBlur;
@@ -778,6 +814,14 @@
             lastState.wrapper = wrapper;
             lastState.firstSlide = firstSlide;
             lastState.slidesCount = slidesCount;
+
+            document.body.classList.toggle("ps-variant-old", settings.newHomeUiVariant === "old");
+            document.body.classList.toggle("ps-variant-custom", settings.newHomeUiVariant === "customWaveWheel");
+            document.body.classList.toggle("ps-variant-new", settings.newHomeUiVariant === "new");
+
+            if (settings.newHomeUiVariant === "old" && settingsOpen) {
+                closeSettings();
+            }
 
             gridManager.sync(host, settings.customWaveWheel);
 
