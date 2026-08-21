@@ -1,7 +1,7 @@
 {
     "name": "YM Old Home UI",
-    "description": "Реализует логику старого иинтерфейса Моей волны на главной странице Яндекс Музыки. И позволяет настроить Vide анимацию",
-    "version": "1.3",
+    "description": "Реализует старый интерфейс Моей волны на главной странице Яндекс Музыки. Позволяет настроить Vibe анимацию",
+    "version": "1.4",
     "author": [
         "desaichk",
         "thekingoftime"
@@ -14,6 +14,7 @@
     "script": "script.js",
     "tags": [
         "Old UI",
+        "Themed",
         "No new Vibe"
     ],
     "dependencies": [],

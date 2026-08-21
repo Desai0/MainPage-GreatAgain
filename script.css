@@ -46,12 +46,13 @@
     transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
 }
 
-.ps-settings-open .VibeResetButton_root__ju8pE,
-.ps-variant-old .VibeResetButton_root__ju8pE {
-    transform: translateX(-18.3vw) !important;
+.ps-settings-open .VibeResetButton_root__ju8pE {
+    transform: translateX(-16.3vw) !important;
 }
 
 .ps-variant-old .VibeResetButton_root__ju8pE {
+    margin-left: 2vw !important;
+    transform: none !important;
     transition: none !important;
 }
 
