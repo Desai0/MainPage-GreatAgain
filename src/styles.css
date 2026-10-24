@@ -1,0 +1,510 @@
+/* Прошу не использовать данные наработки в своих аддонах, если хотите новую функцию или добавить поддержку к вашей теме - свяжитесь со мной на ветке в дискорде */
+
+[class*="MainPage_actionsContainer__"],
+[class*="VibePage_entityMeta__"],
+[class*="VibePage_playerBlock__"],
+[class*="MainPage_actionsBar__agoxp"],
+[class*="MainPage_betaSlot_newVibe__DGtXm"] {
+    display: none !important;
+}
+
+[data-test-id="MAIN_PAGE"] {
+    position: relative !important;
+    overflow: visible !important;
+}
+
+.VibeResetButton_root__ju8pE {
+    margin-top: -300px !important;
+    background: none !important;
+    backdrop-filter: none !important;
+    background-color: none !important;
+}
+
+[data-test-id="VIBE_ANIMATION"] {
+    margin-left: 18.3vw !important;
+    position: absolute !important;
+    pointer-events: none !important;
+    transition: left 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+
+.ps-hide-vibe-animation [data-test-id="VIBE_ANIMATION"] {
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+.ps-settings-open [data-test-id="VIBE_ANIMATION"],
+.ps-variant-old [data-test-id="VIBE_ANIMATION"] {
+    left: 24.6vw !important;
+}
+
+.ps-variant-old [data-test-id="VIBE_ANIMATION"] {
+    transition: none !important;
+}
+
+.VibeWidgetAnimation_root__7fpeP canvas {
+    scale: 0.55 !important;
+}
+
+.VibeResetButton_root__ju8pE {
+    margin-left: 4vw !important;
+    transition-property: transform !important;
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+
+.ps-settings-open .VibeResetButton_root__ju8pE {
+    transform: translateX(-16.3vw) !important;
+}
+
+.ps-variant-old .VibeResetButton_root__ju8pE {
+    margin-left: 2vw !important;
+    transform: none !important;
+    transition: none !important;
+}
+
+.VibePage_wheel__E_p8_ {
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
+    transition-property: transform, opacity !important;
+    opacity: 0.9 !important;
+}
+
+.ps-settings-open .VibePage_wheel__E_p8_,
+.ps-variant-old .VibePage_wheel__E_p8_ {
+    transform: translateX(-15vw) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+}
+
+.ps-variant-old .VibePage_wheel__E_p8_ {
+    display: none !important;
+}
+
+.VibeWidgetAnimation_root__7fpeP canvas {
+    transform-origin: center center;
+}
+
+#ps-vibe-controls.ps-vibe-controls {
+    position: absolute;
+    left: 70%;
+    top: 50%;
+    z-index: 12;
+    display: grid;
+    gap: 12px;
+    width: min(20.5rem, calc(100% - 24px));
+    height: auto;
+    max-width: calc(100% - 24px);
+    margin: 0;
+    padding: 18px 20px;
+    /* border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+        radial-gradient(circle at top left, rgba(123, 255, 196, 0.12), transparent 52%),
+        rgba(12, 14, 18, 0.425);
+    backdrop-filter: blur(18px);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24); */
+    pointer-events: auto;
+    transform: translate(-50%, -50%);
+    transition: left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+#ps-vibe-controls.ps-vibe-controls.ps-settings-open,
+.ps-variant-old #ps-vibe-controls.ps-vibe-controls {
+    left: 50%;
+}
+
+.ps-variant-old #ps-vibe-controls.ps-vibe-controls {
+    transition: none !important;
+}
+
+#ps-vibe-controls[hidden] {
+    display: none;
+}
+
+.ps-vibe-header {
+    display: grid;
+    gap: 4px;
+}
+
+.ps-vibe-title {
+    display: none;
+}
+
+.ps-vibe-subtitle {
+    display: none;
+}
+
+.ps-vibe-play-button.ps-vibe-play-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    border-radius: 12px;
+}
+
+.ps-vibe-settings-button.ps-vibe-settings-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 48px;
+    border-radius: 12px;
+    background: transparent !important;
+    color: rgb(255, 255, 255);
+}
+
+.ps-vibe-settings-button.ps-vibe-settings-button:hover {
+    background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.ps-vibe-icon-wrap {
+    position: relative;
+}
+
+.ps-vibe-play-glyph[hidden],
+.ps-vibe-pause-glyph[hidden] {
+    display: none !important;
+}
+
+.ps-vibe-pause-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: calc(var(--ym-spacer-size-xxxxl, 2rem) + 0.35rem);
+    height: calc(var(--ym-spacer-size-xxxxl, 2rem) + 0.35rem);
+    color: #7bffc4;
+}
+
+.ps-vibe-pause-bar {
+    display: block;
+    width: 5px;
+    height: 22px;
+    border-radius: 1px !important;
+    background: currentColor;
+}
+
+.ps-vibe-play-button[data-state="pause"] .PlayButton_icon__t_THQ,
+.ps-vibe-play-button[data-state="resume"] .PlayButton_icon__t_THQ,
+.ps-vibe-play-button[data-state="pause"] .ps-vibe-pause-glyph,
+.ps-vibe-play-button[data-state="resume"] .ps-vibe-pause-glyph {
+    color: #ffffff !important;
+}
+
+.ps-vibe-button-label {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: rgba(255, 255, 255, 0.863);
+}
+
+.ps-vibe-settings-label {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.ps-vibe-settings-button .l3tE1hAMmBj2aoPPwU08 {
+    color: rgb(255, 255, 255);
+}
+
+.ps-vibe-status {
+    display: none;
+}
+
+.ps-vibe-controls {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+}
+
+span.VibeResetButton_context__hsTlv[title="Моя волна"] {
+    display: none !important;
+}
+
+/* Warning Overlay */
+.ps-warning-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(10, 12, 16, 0.6) !important;
+    backdrop-filter: blur(25px) !important;
+    z-index: 999999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    animation: psFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.ps-warning-fadeout {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.ps-warning-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 28px !important;
+    padding: 32px 24px !important;
+    width: min(400px, 90vw) !important;
+    text-align: center !important;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    animation: psScaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.ps-warning-icon {
+    width: 56px !important;
+    height: 56px !important;
+    color: #ffb700 !important;
+    margin-bottom: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    filter: drop-shadow(0 4px 12px rgba(255, 183, 0, 0.2));
+}
+
+.ps-warning-icon svg {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.ps-warning-title {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    margin: 0 0 12px 0 !important;
+    letter-spacing: -0.01em !important;
+}
+
+.ps-warning-desc {
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    margin: 0 0 28px 0 !important;
+}
+
+.ps-warning-desc strong {
+    color: #7bffc4 !important;
+    font-weight: 600 !important;
+}
+
+.ps-warning-btn {
+    width: 100% !important;
+    min-height: 48px !important;
+    border-radius: 14px !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #0c0e12 !important;
+    font-weight: 600 !important;
+    font-size: 15px !important;
+    cursor: pointer !important;
+    transition: transform 0.2s ease, opacity 0.2s ease !important;
+    outline: none !important;
+}
+
+.ps-warning-btn:hover {
+    transform: scale(1.02) !important;
+    opacity: 0.95 !important;
+}
+
+.ps-warning-btn:active {
+    transform: scale(0.98) !important;
+}
+
+@keyframes psFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes psScaleUp {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* 3D-колесо в плоский Grid-список (активируется только при включенной настройке) */
+[class*="WheelDesktop_root"].ps-custom-wheel-active {
+    height: auto !important;
+    max-height: calc(100vh - 180px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+    margin: 20px auto !important;
+    padding: 0 20px !important;
+    touch-action: pan-y !important;
+}
+
+[class*="WheelDesktop_root"].ps-custom-wheel-active::-webkit-scrollbar {
+    width: 6px !important;
+}
+
+[class*="WheelDesktop_root"].ps-custom-wheel-active::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+
+[class*="WheelDesktop_root"].ps-custom-wheel-active::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-radius: 4px !important;
+}
+
+[class*="WheelDesktop_root"].ps-custom-wheel-active::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.28) !important;
+}
+
+[class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelDesktop_wrapper"] {
+    transform: none !important;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+    gap: 24px 20px !important;
+    height: auto !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    align-items: start !important;
+    touch-action: auto !important;
+}
+
+[class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelDesktop_slide"] {
+    transform: none !important;
+    width: 100% !important;
+    height: auto !important;
+    opacity: 1 !important;
+    filter: none !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+    margin-bottom: 0 !important;
+    transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.25s cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+
+.ps-settings-open [class*="WheelDesktop_root"].ps-custom-wheel-active,
+.ps-settings-open [class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelDesktop_slide"],
+.ps-settings-open [class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelItem_root"] {
+    pointer-events: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.25s cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+
+[class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelDesktop_slide"][class*="swiper-slide-duplicate"] {
+    display: none !important;
+}
+
+[class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelDesktop_slide"]:hover {
+    transform: translateY(-5px) !important;
+}
+
+[class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelDesktopItem_root"],
+[class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelDesktopItem_element"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    height: auto !important;
+}
+
+/* Стилизация карточек внутри Grid */
+[class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelItem_root"] {
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 20px !important;
+    padding: 16px 12px 14px 12px !important;
+    width: 100% !important;
+    height: 160px !important;
+    min-height: 160px !important;
+    max-height: 160px !important;
+    overflow: hidden !important;
+    display: block !important;
+    position: relative !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, backdrop-filter 0.2s ease !important;
+    box-sizing: border-box !important;
+}
+
+[class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelDesktop_slide"]:hover [class*="WheelItem_root"] {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04)) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3) !important;
+}
+
+
+/* Абсолютное позиционирование обложки карточки */
+[class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelItem_coverContainer"] {
+    position: absolute !important;
+    top: 14px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    height: 80px !important;
+    width: 80px !important;
+    margin: 0 !important;
+    transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1) !important;
+    flex-shrink: 0 !important;
+}
+
+[class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelDesktop_slide"]:hover [class*="WheelItem_coverContainer"] {
+    transform: translateX(-50%) scale(1.05) !important;
+}
+
+/* Абсолютное позиционирование текста мета-информации снизу */
+[class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelItem_entityMeta"] {
+    position: absolute !important;
+    bottom: 12px !important;
+    left: 8px !important;
+    right: 8px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    overflow: hidden !important;
+}
+
+/* Описание ("В стиле артиста") */
+[class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelItem_description"] {
+    font-size: 10px !important;
+    color: rgba(255, 255, 255, 0.4) !important;
+    margin-bottom: 2px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    display: block !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    overflow: hidden !important;
+    width: 100% !important;
+}
+
+[class*="WheelDesktop_root"].ps-custom-wheel-active [class*="WheelItem_title"] {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    width: 93% !important;
+
+}
+
+
+[class*="WheelDesktop_root"].ps-custom-wheel-active.VibePage_wheel__E_p8_ {
+    margin-left: 60px !important;
+}
+
+.VibeResetButton_root__ju8pE {
+    margin-left: 0px !important;
+}

@@ -1,12 +1,13 @@
 {
+    "id": "53a5ab330f89df3ced0497c8",
     "name": "YM Old Home UI",
     "description": "Реализует старый интерфейс Моей волны на главной странице Яндекс Музыки. Позволяет настроить Vibe анимацию",
-    "version": "1.4",
+    "version": "1.5.1",
     "author": [
         "desaichk",
         "thekingoftime"
     ],
-    "type": "script",
+    "type": "web-addon",
     "image": "orig.png",
     "banner": "1.png",
     "libraryLogo": "orig.png",
@@ -22,7 +23,117 @@
     "supportedVersions": [
         ">=5.90.0"
     ],
+    "requirements": {
+        "minHostApi": 1,
+        "capabilities": [
+            "lifecycle-v1",
+            "async-start-v1",
+            "net-per-addon-v1",
+            "typed-settings-v1"
+        ]
+    },
+    "cssScope": "global",
+    "settings": {
+        "sections": [
+            {
+                "title": "Old Home UI",
+                "items": [
+                    {
+                        "id": "enabled",
+                        "name": "Enable old home block",
+                        "description": "Показывать старый блок Моей волны на главной странице.",
+                        "value": true,
+                        "defaultValue": true,
+                        "type": "button"
+                    },
+                    {
+                        "id": "hideVibeAnimation",
+                        "name": "Hide vibe animation",
+                        "description": "Скрывать анимацию Моей волны.",
+                        "value": false,
+                        "defaultValue": false,
+                        "type": "button"
+                    },
+                    {
+                        "id": "newHomeUiVariant",
+                        "name": "Колесо волны",
+                        "description": "Выбор варианта оформления колеса волны.",
+                        "value": "old",
+                        "defaultValue": "old",
+                        "type": "selector",
+                        "options": {
+                            "[\"string\",\"old\"]": {
+                                "event": "old",
+                                "name": "Старый",
+                                "value": "old"
+                            },
+                            "[\"string\",\"customWaveWheel\"]": {
+                                "event": "customWaveWheel",
+                                "name": "Альтернативный",
+                                "value": "customWaveWheel"
+                            },
+                            "[\"string\",\"new\"]": {
+                                "event": "new",
+                                "name": "Новый",
+                                "value": "new"
+                            }
+                        }
+                    },
+                    {
+                        "id": "canvasBlur",
+                        "name": "Размытие",
+                        "description": "Размытие анимации в пикселях. При использовании ChromaSync отключите кастомный цвет Волны или оставьте фильтры по умолчанию.",
+                        "value": 0,
+                        "defaultValue": 0,
+                        "type": "slider",
+                        "min": 0,
+                        "max": 20,
+                        "step": 1
+                    },
+                    {
+                        "id": "canvasSaturate",
+                        "name": "Насыщенность",
+                        "value": 1,
+                        "defaultValue": 1,
+                        "type": "slider",
+                        "min": 0,
+                        "max": 5,
+                        "step": 0.1
+                    },
+                    {
+                        "id": "canvasContrast",
+                        "name": "Контраст",
+                        "value": 1,
+                        "defaultValue": 1,
+                        "type": "slider",
+                        "min": 0,
+                        "max": 5,
+                        "step": 0.1
+                    },
+                    {
+                        "id": "canvasBrightness",
+                        "name": "Яркость",
+                        "value": 1,
+                        "defaultValue": 1,
+                        "type": "slider",
+                        "min": 0,
+                        "max": 3,
+                        "step": 0.1
+                    },
+                    {
+                        "id": "canvasScale",
+                        "name": "Размер",
+                        "value": 1.2,
+                        "defaultValue": 1.2,
+                        "type": "slider",
+                        "min": 0.5,
+                        "max": 2,
+                        "step": 0.05
+                    }
+                ]
+            }
+        ]
+    },
     "installSource": "local",
-    "id": "53a5ab330f89df3ced0497c8",
     "storeAddonId": "58d0eae9-587d-4b46-a77d-9fe009516a6f"
 }

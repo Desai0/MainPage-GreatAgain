@@ -1,7 +1,7 @@
 {
     "enabled": true,
     "hideVibeAnimation": false,
-    "newHomeUiVariant": "0",
+    "newHomeUiVariant": "old",
     "canvasBlur": 0,
     "canvasSaturate": 1,
     "canvasContrast": 1,
