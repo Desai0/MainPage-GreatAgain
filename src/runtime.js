@@ -110,18 +110,20 @@ export function startOldHomeUi(lifecycle) {
 
         var desc = document.createElement("p");
         desc.className = "ps-warning-desc";
-        desc.innerHTML = 'Для корректной работы аддона включите старую панель плеера:<br><br><strong>Настройки → Панель Плеера → Старая панель в новой Волне</strong>';
+        desc.innerHTML = 'Для корректной работы аддона включите старую панель плеера:<br><br><a class="ps-warning-link" href="yandexmusic://mod-settings/player/modSettings.playerBarEnhancement.showOldPlayerBarOnNewWave" target="_blank" rel="noopener noreferrer"><strong>Настройки → Панель Плеера → Старая панель в новой Волне</strong></a>';
 
         var closeBtn = document.createElement("button");
         closeBtn.className = "ps-warning-btn";
         closeBtn.textContent = "Понятно";
-        closeBtn.addEventListener("click", function () {
+        function closeWarning() {
             isWarningClosed = true;
             overlay.classList.add("ps-warning-fadeout");
             lifecycle.setTimeout(function () {
                 overlay.remove();
             }, 300);
-        });
+        }
+        closeBtn.addEventListener("click", closeWarning);
+        desc.querySelector(".ps-warning-link").addEventListener("click", closeWarning);
 
         card.appendChild(icon);
         card.appendChild(title);

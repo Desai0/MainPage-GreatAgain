@@ -296,6 +296,12 @@ span.VibeResetButton_context__hsTlv[title="Моя волна"] {
     font-weight: 600 !important;
 }
 
+.ps-warning-link {
+    color: #7bffc4;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+
 .ps-warning-btn {
     width: 100% !important;
     min-height: 48px !important;
